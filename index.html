@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>DOOM SURVIVORS: BOSS RAID</title>
+    <title>DOOM SURVIVORS: INFINITY WAR v1.4</title>
     <style>
         body {
             margin: 0;
@@ -535,7 +535,7 @@
 
         const SKILLS = [
             { id: 'heal', name: 'HEAL', icon: '❤️', desc: 'Heal 50 HP' },
-            { id: 'pulse', name: 'SHOCKWAVE', icon: '🌊', desc: 'Push Enemies' },
+            { id: 'pulse', name: 'SHOCKWAVE', icon: '🌊', desc: 'Damage Enemies' },
             { id: 'overclock', name: 'OVERCLOCK', icon: '🔥', desc: 'Rapid Fire (5s)' },
             { id: 'timelock', name: 'TIME LOCK', icon: '⏱️', desc: 'Freeze (5s)' },
             { id: 'warp', name: 'WARP', icon: '🌀', desc: 'Teleport' },
@@ -558,7 +558,6 @@
             TOTEM: { color: 0x00ff00, hp: 20, damage: 0, speed: 0.0, xp: 100, scale: 1.5, type: 'totem', shape: 'pyramid' }
         };
 
-        // 보스 타입 정의
         const BOSS_TYPES = {
             OVERLORD: { name: "THE OVERLORD", color: 0xff0000, scale: 4.0, hp: 1500, speed: 1.5, damage: 50, type: 'boss_overlord' },
             KING_SLIME: { name: "KING SLIME", color: 0x00ff00, scale: 3.0, hp: 1000, speed: 3.5, damage: 15, type: 'boss_slime' },
@@ -583,7 +582,7 @@
 
         let objects = [];
         let enemies = [];
-        let enemyBullets = []; // 적 투사체
+        let enemyBullets = [];
         let gun, boss, orbital;
 
         let isPlaying = false, isPaused = false, isLevelUpState = false;
@@ -624,15 +623,10 @@
         function init() {
             initLobby();
             clock = new THREE.Clock();
-            scene = new THREE.Scene();
-            // 배경과 안개 밝기 조정 (0x101010 -> 0x0D0D0D : 약 7% 어둡게)
-            scene.background = new THREE.Color(0x0D0D0D);
-            scene.fog = new THREE.Fog(0x0D0D0D, 0, 60);
-
+            scene = new THREE.Scene(); scene.background = new THREE.Color(0x0D0D0D); scene.fog = new THREE.Fog(0x0D0D0D, 0, 60);
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000); camera.rotation.order = 'YXZ';
             renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setSize(window.innerWidth, window.innerHeight); renderer.shadowMap.enabled = true; document.body.appendChild(renderer.domElement);
 
-            // 기본 조명도 살짝 어둡게 조정 (0x606060 -> 0x585858)
             ambientLightObj = new THREE.AmbientLight(0x585858);
             scene.add(ambientLightObj);
 
@@ -696,11 +690,7 @@
                 ...player, ...baseStats, maxHp: baseStats.hp, level: 1, xp: 0, nextLevelXp: 100, kills: 0, skillReady: true
             };
 
-            // Reset Elite Upgrades
             hasOrbital = false; hasGiantSlayer = false; hasRhythm = false; hasMultishot = false; lightLevel = 0;
-
-            // 게임 재시작 시 조명 초기화 (기본값 1.0)
-            // LIGHT 업그레이드 획득 시 intensity가 올라가므로 초기화 필요
             ambientLightObj.intensity = 1.0;
             if (orbital) { scene.remove(orbital); orbital = null; }
 
@@ -781,10 +771,12 @@
             enemy.position.set(posX, type.shape === 'dodeca' ? 2 * type.scale : 2 * type.scale, posZ);
             if (isScanning) enemy.renderOrder = 999;
 
-            const multiplier = 1 + (stage - 1) * 0.3;
+            const multiplier = 1 + (stage - 1) * 0.45;
             enemy.userData = { ...type };
             enemy.userData.hp = Math.floor((type.hp + Math.floor(elapsedTime / 30)) * multiplier);
             enemy.userData.damage = Math.floor(type.damage * multiplier);
+            // XP Scaling applied
+            enemy.userData.xp = Math.floor(type.xp * (1 + (stage - 1) * 0.5));
 
             if (type.type === 'totem') enemy.userData.speed = 0;
 
@@ -792,13 +784,12 @@
         }
 
         function spawnBoss() {
-            // 랜덤 보스 선택
             const keys = Object.keys(BOSS_TYPES);
             const randomKey = keys[Math.floor(Math.random() * keys.length)];
             const bossType = BOSS_TYPES[randomKey];
 
             let geo;
-            if (bossType.type === 'boss_overlord') geo = new THREE.IcosahedronGeometry(8, 1); // 압도적인 크기
+            if (bossType.type === 'boss_overlord') geo = new THREE.IcosahedronGeometry(8, 1);
             else if (bossType.type === 'boss_slime') geo = new THREE.SphereGeometry(6, 32, 32);
             else if (bossType.type === 'boss_cannon') geo = new THREE.BoxGeometry(6, 6, 6);
 
@@ -806,14 +797,14 @@
             boss = new THREE.Mesh(geo, mat);
             boss.position.set(0, 8, 0);
 
-            const multiplier = 1 + (stage - 1) * 0.5;
+            const multiplier = 1 + (stage - 1) * 0.65;
             const hp = Math.floor(bossType.hp * multiplier);
 
             boss.userData = {
                 ...bossType,
                 hp: hp, maxHp: hp,
                 damage: Math.floor(bossType.damage * multiplier),
-                shootTimer: 0 // 캐논용 타이머
+                shootTimer: 0
             };
 
             scene.add(boss);
@@ -822,46 +813,36 @@
             playSound('boss_spawn');
         }
 
-        // 미니언 소환 (킹 슬라임)
         function spawnSlimeMinion(parentPos) {
             const geo = new THREE.SphereGeometry(2, 16, 16);
             const mat = new THREE.MeshStandardMaterial({ color: 0x00aa00, emissive: 0x002200 });
             const minion = new THREE.Mesh(geo, mat);
-
-            // 보스 주변 랜덤 위치
             minion.position.copy(parentPos);
             minion.position.x += (Math.random() - 0.5) * 10;
             minion.position.z += (Math.random() - 0.5) * 10;
 
-            const multiplier = 1 + (stage - 1) * 0.3;
+            const multiplier = 1 + (stage - 1) * 0.45;
             minion.userData = {
                 hp: Math.floor(200 * multiplier),
-                speed: 6.0, // 빠름
+                speed: 6.0,
                 damage: Math.floor(8 * multiplier),
-                type: 'basic' // 일반 적 취급 (AI 공유)
+                type: 'basic'
             };
-
-            scene.add(minion);
-            enemies.push(minion);
+            scene.add(minion); enemies.push(minion);
         }
 
-        // 투사체 발사 (둠 캐논)
         function fireBossProjectile(origin) {
             const geo = new THREE.SphereGeometry(1, 8, 8);
             const mat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
             const bullet = new THREE.Mesh(geo, mat);
             bullet.position.copy(origin);
 
-            // 플레이어 방향 계산
-            const target = camera.position.clone();
-            target.y -= 1; // 약간 아래로
+            const target = camera.position.clone(); target.y -= 1;
             const dir = new THREE.Vector3().subVectors(target, origin).normalize();
+            bullet.userData = { velocity: dir.multiplyScalar(15), life: 5.0 };
 
-            bullet.userData = { velocity: dir.multiplyScalar(15), life: 5.0 }; // 속도 15
-
-            scene.add(bullet);
-            enemyBullets.push(bullet);
-            playSound('shoot'); // 재활용
+            scene.add(bullet); enemyBullets.push(bullet);
+            playSound('shoot');
         }
 
         function useSkill() {
@@ -873,8 +854,7 @@
                 const targets = boss ? [boss, ...enemies] : enemies;
                 targets.forEach(e => {
                     if (e.position.distanceTo(camera.position) < 25) {
-                        e.userData.hp -= 10;
-                        // No Knockback
+                        e.userData.hp -= 9; // Reduced damage to 9
                         if (e.userData.hp <= 0) killEnemy(e);
                     }
                 }); playSkillEffect();
@@ -993,7 +973,14 @@
             isLevelUpState = true; isPaused = true; document.exitPointerLock();
             levelUpOpenTime = Date.now(); isMouseDown = false;
             const screen = document.getElementById('levelup-screen'); const container = document.getElementById('cards-container'); container.innerHTML = ''; screen.style.display = 'flex'; playSound('levelup');
-            const upgrades = [{ name: "DAMAGE UP", desc: "Increase Damage", icon: "⚔️", apply: () => player.damage += 1 }, { name: "RAPID FIRE", desc: "Increase Fire Rate", icon: "🔫", apply: () => player.fireRate *= 0.85 }, { name: "SPEED UP", desc: "Move Faster", icon: "⚡", apply: () => player.speed += 1.5 }, { name: "MAX HP UP", desc: "Heal & Boost HP", icon: "❤️", apply: () => { player.maxHp += 50; player.hp = player.maxHp; } }];
+
+            // Nerfed Upgrades
+            const upgrades = [
+                { name: "DAMAGE UP", desc: "Increase Damage", icon: "⚔️", apply: () => player.damage += 0.5 },
+                { name: "RAPID FIRE", desc: "Increase Fire Rate", icon: "🔫", apply: () => player.fireRate *= 0.9 },
+                { name: "SPEED UP", desc: "Move Faster", icon: "⚡", apply: () => player.speed += 1.5 },
+                { name: "MAX HP UP", desc: "Heal & Boost HP", icon: "❤️", apply: () => { player.maxHp += 30; player.hp = player.maxHp; } }
+            ];
             currentUpgrades = upgrades.sort(() => 0.5 - Math.random()).slice(0, 3); selectedCardIndex = -1;
             currentUpgrades.forEach((upgrade, index) => {
                 const card = document.createElement('div'); card.className = 'upgrade-card locked'; card.id = `card-${index}`;
@@ -1069,30 +1056,25 @@
                 if (e === boss) {
                     const bossType = e.userData.type;
 
-                    // 공통: 플레이어 추격 (느리게)
                     const dist = e.position.distanceTo(camera.position);
                     const dir = new THREE.Vector3().subVectors(camera.position, e.position).normalize();
                     e.position.addScaledVector(dir, e.userData.speed * delta);
 
-                    // 보스별 특수 패턴
                     if (bossType === 'boss_slime') {
-                        // 분열 (HP 50% 이하)
                         if (e.userData.hp < e.userData.maxHp * 0.5 && !e.userData.hasSplit) {
                             e.userData.hasSplit = true;
                             spawnSlimeMinion(e.position);
                             spawnSlimeMinion(e.position);
                         }
                     } else if (bossType === 'boss_cannon') {
-                        // 투사체 발사
                         e.userData.shootTimer += delta;
                         if (e.userData.shootTimer > 5.0) {
                             fireBossProjectile(e.position);
-                            setTimeout(() => fireBossProjectile(e.position), 300); // 2발 연속
+                            setTimeout(() => fireBossProjectile(e.position), 300);
                             e.userData.shootTimer = 0;
                         }
                     }
 
-                    // 근접 데미지 (공통)
                     if (dist < 8) takeDamage(e.userData.damage * delta * 2);
                     return;
                 }
@@ -1105,7 +1087,6 @@
                 } else takeDamage(e.userData.damage * delta * damageMultiplier);
             });
 
-            // 적 투사체 업데이트
             for (let i = enemyBullets.length - 1; i >= 0; i--) {
                 const b = enemyBullets[i];
                 b.position.addScaledVector(b.userData.velocity, delta);
@@ -1117,7 +1098,7 @@
                 } else {
                     const dist = b.position.distanceTo(camera.position);
                     if (dist < 2.0) {
-                        takeDamage(20); // 투사체 데미지
+                        takeDamage(20);
                         scene.remove(b);
                         enemyBullets.splice(i, 1);
                     }
