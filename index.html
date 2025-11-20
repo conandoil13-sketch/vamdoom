@@ -297,6 +297,7 @@
             transition: all 0.1s;
             text-align: center;
             color: #fff;
+            cursor: pointer;
         }
 
         .upgrade-card.selected {
@@ -304,6 +305,13 @@
             background: #333;
             transform: scale(1.1);
             box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+        }
+
+        /* 클릭 방지 상태일 때 스타일 */
+        .upgrade-card.locked {
+            filter: grayscale(1);
+            cursor: not-allowed;
+            border-color: #555;
         }
 
         .key-hint {
@@ -530,8 +538,13 @@
         let gun, boss;
 
         let isPlaying = false, isPaused = false, isLevelUpState = false;
-        let isGameOver = false; // 게임 오버/클리어 상태 플래그 추가
+        let isGameOver = false;
         let isOverclocked = false, isTimeFrozen = false;
+
+        // 자동 발사 및 입력 제어 변수
+        let isMouseDown = false;
+        let levelUpOpenTime = 0; // 레벨업 화면 뜬 시각
+        const INPUT_LOCK_DELAY = 500; // 0.5초
 
         let currentUpgrades = [], selectedCardIndex = -1;
 
@@ -567,11 +580,11 @@
 
             createGun(); generateMap();
 
-            document.addEventListener('keydown', onKeyDown); document.addEventListener('keyup', onKeyUp); document.addEventListener('mousedown', onMouseDown); document.addEventListener('mousemove', onMouseMove); window.addEventListener('resize', onWindowResize); document.addEventListener('pointerlockchange', onPointerLockChange);
+            document.addEventListener('keydown', onKeyDown); document.addEventListener('keyup', onKeyUp);
+            document.addEventListener('mousedown', onMouseDown); document.addEventListener('mouseup', onMouseUp);
+            document.addEventListener('mousemove', onMouseMove); window.addEventListener('resize', onWindowResize); document.addEventListener('pointerlockchange', onPointerLockChange);
 
-            // 메뉴 버튼 핸들러 - 여기서 분기 처리
-            document.getElementById('menu-btn').onclick = null; // 초기화
-            // 버튼 핸들러는 상태 변경 시마다 재설정됨
+            document.getElementById('menu-btn').onclick = null;
 
             animate();
         }
@@ -615,11 +628,8 @@
         function startGame() {
             document.getElementById('lobby-screen').style.display = 'none';
             document.body.requestPointerLock();
-
             const baseStats = CHARACTERS[selectedCharIndex].stats;
-            player = {
-                ...player, ...baseStats, maxHp: baseStats.hp, level: 1, xp: 0, nextLevelXp: 100, kills: 0, skillReady: true
-            };
+            player = { ...player, ...baseStats, maxHp: baseStats.hp, level: 1, xp: 0, nextLevelXp: 100, kills: 0, skillReady: true };
             stage = 1;
             initStage();
         }
@@ -636,19 +646,15 @@
 
             let safe = false;
             while (!safe) {
-                const rZ = Math.floor(Math.random() * rawMap.length);
-                const rX = Math.floor(Math.random() * rawMap[0].length);
-                if (rawMap[rZ][rX] === 0) {
-                    camera.position.set((rX - rawMap[0].length / 2) * TILE_SIZE, 2, (rZ - rawMap.length / 2) * TILE_SIZE);
-                    safe = true;
-                }
+                const rZ = Math.floor(Math.random() * rawMap.length); const rX = Math.floor(Math.random() * rawMap[0].length);
+                if (rawMap[rZ][rX] === 0) { camera.position.set((rX - rawMap[0].length / 2) * TILE_SIZE, 2, (rZ - rawMap.length / 2) * TILE_SIZE); safe = true; }
             }
 
             document.getElementById('boss-hud').style.display = 'none';
             document.getElementById('skill-name-display').innerText = `SKILL: ${SKILLS[selectedSkillIndex].name} (SHIFT)`;
 
-            isPlaying = true; isPaused = false; isLevelUpState = false; isOverclocked = false; isTimeFrozen = false;
-            isGameOver = false; // 스테이지 시작 시 게임오버 상태 해제
+            isPlaying = true; isPaused = false; isLevelUpState = false; isOverclocked = false; isTimeFrozen = false; isGameOver = false;
+            isMouseDown = false; // 초기화
 
             updateHUD();
             for (let i = 0; i < 5; i++) spawnEnemy();
@@ -657,7 +663,7 @@
         }
 
         function goToLobby() {
-            isPlaying = false; isGameOver = false; // 로비로 가면 게임오버 아님
+            isPlaying = false; isGameOver = false;
             document.exitPointerLock();
             document.getElementById('menu').style.display = 'none';
             document.getElementById('lobby-screen').style.display = 'flex';
@@ -757,13 +763,40 @@
 
         function showLevelUpScreen() {
             isLevelUpState = true; isPaused = true; document.exitPointerLock();
+
+            // 입력 잠금 시작
+            levelUpOpenTime = Date.now();
+            isMouseDown = false; // 발사 멈춤
+
             const screen = document.getElementById('levelup-screen'); const container = document.getElementById('cards-container'); container.innerHTML = ''; screen.style.display = 'flex'; playSound('levelup');
             const upgrades = [{ name: "DAMAGE UP", desc: "Increase Damage", icon: "⚔️", apply: () => player.damage += 1 }, { name: "RAPID FIRE", desc: "Increase Fire Rate", icon: "🔫", apply: () => player.fireRate *= 0.85 }, { name: "SPEED UP", desc: "Move Faster", icon: "⚡", apply: () => player.speed += 1.5 }, { name: "MAX HP UP", desc: "Heal & Boost HP", icon: "❤️", apply: () => { player.maxHp += 50; player.hp = player.maxHp; } }];
             currentUpgrades = upgrades.sort(() => 0.5 - Math.random()).slice(0, 3); selectedCardIndex = -1;
-            currentUpgrades.forEach((upgrade, index) => { const card = document.createElement('div'); card.className = 'upgrade-card'; card.id = `card-${index}`; card.innerHTML = `<div class="key-hint">${index + 1}</div><div class="card-icon">${upgrade.icon}</div><div class="card-name">${upgrade.name}</div><div class="card-desc">${upgrade.desc}</div>`; card.onclick = () => { selectCard(index); confirmUpgrade(); }; container.appendChild(card); });
+            currentUpgrades.forEach((upgrade, index) => {
+                const card = document.createElement('div'); card.className = 'upgrade-card locked'; card.id = `card-${index}`;
+                card.innerHTML = `<div class="key-hint">${index + 1}</div><div class="card-icon">${upgrade.icon}</div><div class="card-name">${upgrade.name}</div><div class="card-desc">${upgrade.desc}</div>`;
+                card.onclick = () => {
+                    if (Date.now() - levelUpOpenTime < INPUT_LOCK_DELAY) return; // 잠금 확인
+                    selectCard(index); confirmUpgrade();
+                };
+                container.appendChild(card);
+            });
+
+            // 잠금 해제 타이머 (UI 시각적 업데이트)
+            setTimeout(() => {
+                document.querySelectorAll('.upgrade-card').forEach(c => c.classList.remove('locked'));
+            }, INPUT_LOCK_DELAY);
         }
-        function selectCard(index) { if (index < 0 || index >= currentUpgrades.length) return; selectedCardIndex = index; for (let i = 0; i < 3; i++) document.getElementById(`card-${i}`).classList.remove('selected'); document.getElementById(`card-${index}`).classList.add('selected'); playSound('ui_select'); }
-        function confirmUpgrade() { if (selectedCardIndex === -1) return; currentUpgrades[selectedCardIndex].apply(); document.getElementById('levelup-screen').style.display = 'none'; isLevelUpState = false; isPaused = false; document.body.requestPointerLock(); updateHUD(); playSound('ui_confirm'); }
+
+        function selectCard(index) {
+            if (Date.now() - levelUpOpenTime < INPUT_LOCK_DELAY) return; // 키보드 입력도 잠금 확인
+            if (index < 0 || index >= currentUpgrades.length) return;
+            selectedCardIndex = index; for (let i = 0; i < 3; i++) document.getElementById(`card-${i}`).classList.remove('selected'); document.getElementById(`card-${index}`).classList.add('selected'); playSound('ui_select');
+        }
+
+        function confirmUpgrade() {
+            if (selectedCardIndex === -1) return;
+            currentUpgrades[selectedCardIndex].apply(); document.getElementById('levelup-screen').style.display = 'none'; isLevelUpState = false; isPaused = false; document.body.requestPointerLock(); updateHUD(); playSound('ui_confirm');
+        }
 
         function updatePlayer(delta) {
             player.velocity.x -= player.velocity.x * 10.0 * delta; player.velocity.z -= player.velocity.z * 10.0 * delta; player.velocity.y -= GRAVITY * delta;
@@ -803,45 +836,33 @@
         }
 
         function handleGameOver() {
-            isPlaying = false; isGameOver = true; // 게임오버 상태 설정
-            document.exitPointerLock();
-            const menu = document.getElementById('menu');
-            const title = document.getElementById('menu-title');
-            const btn = document.getElementById('menu-btn');
-            const desc = document.getElementById('menu-desc');
-            menu.style.display = 'flex';
-            title.innerText = "YOU DIED"; title.style.color = "#f00";
-            desc.innerText = "RETURN TO LOBBY?";
-            btn.innerText = "MAIN MENU";
-
-            // 이벤트 핸들러 설정
+            isPlaying = false; isGameOver = true; document.exitPointerLock();
+            const menu = document.getElementById('menu'); const title = document.getElementById('menu-title'); const btn = document.getElementById('menu-btn'); const desc = document.getElementById('menu-desc');
+            menu.style.display = 'flex'; title.innerText = "YOU DIED"; title.style.color = "#f00"; desc.innerText = "RETURN TO LOBBY?"; btn.innerText = "MAIN MENU";
             btn.onclick = goToLobby;
         }
 
         function winGame() {
-            playSound('levelup');
-            isPlaying = false; isGameOver = true; // 클리어도 일종의 종료 상태로 취급하여 메뉴 유지
-            document.exitPointerLock();
-            const menu = document.getElementById('menu');
-            const title = document.getElementById('menu-title');
-            const btn = document.getElementById('menu-btn');
-            const desc = document.getElementById('menu-desc');
-            menu.style.display = 'flex';
-            title.innerText = "STAGE CLEARED"; title.style.color = "#0f0";
-            desc.innerText = `NEXT STAGE: ${stage + 1} (DIFFICULTY UP)`;
-            btn.innerText = "NEXT STAGE";
+            playSound('levelup'); isPlaying = false; isGameOver = true; document.exitPointerLock();
+            const menu = document.getElementById('menu'); const title = document.getElementById('menu-title'); const btn = document.getElementById('menu-btn'); const desc = document.getElementById('menu-desc');
+            menu.style.display = 'flex'; title.innerText = "STAGE CLEARED"; title.style.color = "#0f0"; desc.innerText = `NEXT STAGE: ${stage + 1} (DIFFICULTY UP)`; btn.innerText = "NEXT STAGE";
+            btn.onclick = () => { stage++; document.body.requestPointerLock(); initStage(); };
+        }
 
-            btn.onclick = () => {
-                stage++;
-                document.body.requestPointerLock();
-                initStage();
-            };
+        function handleMenuClick() {
+            const btn = document.getElementById('menu-btn');
+            if (btn.innerText === "RESUME") { document.body.requestPointerLock(); }
+            else if (btn.innerText === "MAIN MENU") { goToLobby(); }
         }
 
         function animate() {
             requestAnimationFrame(animate); const delta = clock.getDelta();
             if (isPlaying && !isPaused && !isLevelUpState) {
                 elapsedTime += delta;
+
+                // AUTO-FIRE Logic
+                if (isMouseDown) shoot();
+
                 if (!boss && elapsedTime > BOSS_SPAWN_TIME) spawnBoss();
                 const spawnInterval = Math.max(0.5, 2.0 - (elapsedTime / 300));
                 if (Math.random() < (delta / spawnInterval)) spawnEnemy();
@@ -862,37 +883,26 @@
             if (boss) document.getElementById('boss-hp-bar').style.width = (boss.userData.hp / boss.userData.maxHp) * 100 + '%';
         }
         function onWindowResize() { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
+
         function onKeyDown(e) {
             if (isLevelUpState) { if (e.code === 'Digit1') selectCard(0); if (e.code === 'Digit2') selectCard(1); if (e.code === 'Digit3') selectCard(2); if (e.code === 'Enter' || e.code === 'NumpadEnter') confirmUpgrade(); return; }
             switch (e.code) { case 'KeyW': keys.w = true; break; case 'KeyA': keys.a = true; break; case 'KeyS': keys.s = true; break; case 'KeyD': keys.d = true; break; case 'Space': keys.space = true; break; case 'ShiftLeft': useSkill(); break; }
         }
         function onKeyUp(e) { switch (e.code) { case 'KeyW': keys.w = false; break; case 'KeyA': keys.a = false; break; case 'KeyS': keys.s = false; break; case 'KeyD': keys.d = false; break; case 'Space': keys.space = false; break; } }
-        function onMouseDown() { if (isPlaying && !isPaused && !isLevelUpState) shoot(); }
+
+        // Mouse Input Logic Updated for Auto-Fire & Safety
+        function onMouseDown() { if (isPlaying && !isPaused && !isLevelUpState) isMouseDown = true; }
+        function onMouseUp() { isMouseDown = false; }
+
         function onMouseMove(e) { if (document.pointerLockElement === document.body && !isPaused && !isLevelUpState) { camera.rotation.y -= e.movementX * 0.002; camera.rotation.x -= e.movementY * 0.002; camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x)); } }
 
-        // Pointer Lock Change Handler 수정
         function onPointerLockChange() {
-            if (document.pointerLockElement === document.body) {
-                // Locked: Game Active
-                isPaused = false;
-                document.getElementById('menu').style.display = 'none';
-            } else {
-                // Unlocked
-                // 게임 중이고, 레벨업이나 게임오버 상태가 아닐 때만 일시정지 메뉴 표시
+            if (document.pointerLockElement === document.body) { isPaused = false; document.getElementById('menu').style.display = 'none'; }
+            else {
                 if (isPlaying && !isLevelUpState && !isGameOver) {
-                    isPaused = true;
-                    const menu = document.getElementById('menu');
-                    const title = document.getElementById('menu-title');
-                    const btn = document.getElementById('menu-btn');
-                    const desc = document.getElementById('menu-desc');
-                    menu.style.display = 'flex';
-                    title.innerText = "PAUSED";
-                    title.style.color = "#fff";
-                    desc.innerText = "PRESS ESC TO RESUME";
-                    btn.innerText = "RESUME";
-
-                    // Resume 버튼 기능 설정
-                    btn.onclick = () => document.body.requestPointerLock();
+                    isPaused = true; isMouseDown = false; // Pause stops auto-fire
+                    const menu = document.getElementById('menu'); const title = document.getElementById('menu-title'); const btn = document.getElementById('menu-btn'); const desc = document.getElementById('menu-desc');
+                    menu.style.display = 'flex'; title.innerText = "PAUSED"; title.style.color = "#fff"; desc.innerText = "PRESS ESC TO RESUME"; btn.innerText = "RESUME"; btn.onclick = () => document.body.requestPointerLock();
                 }
             }
         }
