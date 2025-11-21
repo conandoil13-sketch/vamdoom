@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <title>DOOM SURVIVORS: INFINITY WAR v1.4</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            user-select: none;
+            font-family: 'Impact', sans-serif;
+        }
+
+        /* UI 레이어 */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 6px;
+            height: 6px;
+            background: #0f0;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            box-shadow: 0 0 8px #0f0;
+            z-index: 5;
+        }
+
+        #top-hud {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            color: #fff;
+            font-size: 24px;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .hud-item {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 15px;
+            border: 2px solid #555;
+        }
+
+        #xp-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            background: #333;
+        }
+
+        #xp-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #00f, #00ffff);
+            transition: width 0.2s;
+        }
+
+        #bottom-hud {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: #0f0;
+            font-size: 32px;
+            text-shadow: 2px 2px 0 #000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #skill-name-display {
+            font-size: 20px;
+            color: #0ff;
+            margin-bottom: 5px;
+        }
+
+        #skill-cd {
+            width: 200px;
+            height: 5px;
+            background: #333;
+        }
+
+        #skill-bar {
+            width: 100%;
+            height: 100%;
+            background: #0ff;
+        }
+
+        #boss-hud {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #boss-name {
+            color: #f00;
+            font-size: 24px;
+            margin-bottom: 5px;
+            text-shadow: 0 0 10px #f00;
+        }
+
+        #boss-hp-bar-bg {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border: 2px solid #fff;
+        }
+
+        #boss-hp-bar {
+            width: 100%;
+            height: 100%;
+            background: #f00;
+            transition: width 0.1s;
+        }
+
+        /* 로비 화면 */
+        #lobby-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #111;
+            z-index: 40;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            pointer-events: auto;
+        }
+
+        .lobby-section {
+            margin-bottom: 15px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .section-title {
+            font-size: 20px;
+            color: #aaa;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .selection-grid {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .select-card {
+            width: 130px;
+            height: 90px;
+            background: #222;
+            border: 2px solid #444;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 5px;
+        }
+
+        .select-card:hover {
+            background: #333;
+            transform: translateY(-2px);
+        }
+
+        .select-card.selected {
+            border-color: #0f0;
+            background: #002200;
+            box-shadow: 0 0 10px #0f0;
+        }
+
+        .sel-icon {
+            font-size: 24px;
+            margin-bottom: 2px;
+        }
+
+        .sel-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .sel-desc {
+            font-size: 10px;
+            color: #888;
+            margin-top: 2px;
+            display: none;
+        }
+
+        .select-card:hover .sel-desc {
+            display: block;
+            position: absolute;
+            bottom: -30px;
+            background: #000;
+            padding: 5px;
+            z-index: 10;
+            border: 1px solid #555;
+            width: 150px;
+            pointer-events: none;
+        }
+
+        #lobby-start-btn {
+            padding: 15px 80px;
+            font-size: 24px;
+            background: #00cc00;
+            color: #000;
+            border: none;
+            cursor: pointer;
+            font-family: 'Impact';
+            margin-top: 20px;
+            box-shadow: 0 0 20px #00ff00;
+            transition: transform 0.1s;
+        }
+
+        #lobby-start-btn:hover {
+            background: #00ff00;
+            transform: scale(1.05);
+        }
+
+        /* 레벨업/엘리트 보상 화면 */
+        #levelup-screen,
+        #elite-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 20;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+        }
+
+        #levelup-title {
+            font-size: 50px;
+            color: #ffcc00;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px #ffcc00;
+        }
+
+        #elite-title {
+            font-size: 50px;
+            color: #ffd700;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px #ffd700;
+        }
+
+        #levelup-guide {
+            font-size: 20px;
+            color: #fff;
+            margin-bottom: 30px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        #cards-container,
+        #elite-card-container {
+            display: flex;
+            gap: 30px;
+        }
+
+        .upgrade-card {
+            position: relative;
+            width: 220px;
+            height: 320px;
+            background: #222;
+            border: 4px solid #555;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            transition: all 0.1s;
+            text-align: center;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .upgrade-card.selected {
+            border-color: #00ff00;
+            background: #333;
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+        }
+
+        .upgrade-card.locked {
+            filter: grayscale(1);
+            cursor: not-allowed;
+            border-color: #555;
+        }
+
+        .upgrade-card.elite {
+            border: 4px solid #ffd700;
+            box-shadow: 0 0 30px #ffd700;
+            width: 260px;
+            height: 380px;
+        }
+
+        .key-hint {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fff;
+            color: #000;
+            font-weight: bold;
+            padding: 2px 10px;
+            border-radius: 5px;
+            font-size: 18px;
+        }
+
+        .card-icon {
+            font-size: 50px;
+            margin-bottom: 20px;
+        }
+
+        .card-name {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #00ff00;
+        }
+
+        .upgrade-card.elite .card-name {
+            color: #ffd700;
+        }
+
+        .card-desc {
+            font-size: 16px;
+            color: #ccc;
+        }
+
+        /* 결과/일시정지 메뉴 */
+        #menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 30;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            pointer-events: auto;
+        }
+
+        h1 {
+            font-size: 80px;
+            color: #f00;
+            margin: 0;
+            letter-spacing: 10px;
+            text-shadow: 0 0 30px #f00;
+        }
+
+        p {
+            color: #aaa;
+            font-size: 20px;
+            margin-bottom: 40px;
+            text-align: center;
+            font-family: 'Courier New';
+        }
+
+        button {
+            padding: 20px 50px;
+            font-size: 24px;
+            background: #f00;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-family: 'Impact';
+            letter-spacing: 2px;
+            transition: background 0.3s;
+            margin-top: 20px;
+        }
+
+        button:hover {
+            background: #fff;
+            color: #f00;
+        }
+
+        #damage-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, transparent 50%, rgba(255, 0, 0, 0.6) 100%);
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        #skill-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, transparent 20%, rgba(0, 255, 255, 0.4) 100%);
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        #time-freeze-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 255, 255, 0.2);
+            mix-blend-mode: screen;
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+            z-index: 3;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+
+<body>
+
+    <div id="damage-overlay"></div>
+    <div id="skill-overlay"></div>
+    <div id="time-freeze-overlay"></div>
+
+    <div id="ui-layer">
+        <div id="xp-container">
+            <div id="xp-bar"></div>
+        </div>
+        <div id="crosshair"></div>
+        <div id="top-hud">
+            <div class="hud-item">STAGE: <span id="stage-display">1</span></div>
+            <div class="hud-item">TIME: <span id="time-display">00:00</span></div>
+            <div class="hud-item">LV: <span id="level-display">1</span></div>
+            <div class="hud-item" style="color: #f00">KILL: <span id="kill-display">0</span></div>
+        </div>
+        <div id="boss-hud">
+            <div id="boss-name">☠️ THE OVERLORD ☠️</div>
+            <div id="boss-hp-bar-bg">
+                <div id="boss-hp-bar"></div>
+            </div>
+        </div>
+        <div id="bottom-hud">
+            <div id="health-display">HP: 100 / 100</div>
+            <div style="font-size: 18px; color: #fff;">
+                <div id="skill-name-display">SKILL</div>
+                <div id="skill-cd">
+                    <div id="skill-bar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="lobby-screen">
+        <h1 style="color:#fff; text-shadow: 0 0 20px #fff; margin-bottom:20px; font-size: 50px;">DOOM SURVIVORS</h1>
+        <div class="lobby-section">
+            <div class="section-title">SELECT CLASS</div>
+            <div class="selection-grid" id="char-grid"></div>
+        </div>
+        <div class="lobby-section">
+            <div class="section-title">SELECT SKILL</div>
+            <div class="selection-grid" id="skill-grid"></div>
+        </div>
+        <button id="lobby-start-btn">START GAME</button>
+    </div>
+
+    <div id="levelup-screen">
+        <div id="levelup-title">LEVEL UP!</div>
+        <div id="levelup-guide">Press [1, 2, 3] to Select -> [ENTER] to Confirm</div>
+        <div id="cards-container"></div>
+    </div>
+
+    <div id="elite-screen">
+        <div id="elite-title">STAGE CLEARED!</div>
+        <div id="levelup-guide" style="color:#ffd700">ELITE UPGRADE ACQUIRED</div>
+        <div id="elite-card-container"></div>
+    </div>
+
+    <div id="menu">
+        <h1 id="menu-title">PAUSED</h1>
+        <p id="menu-desc">PRESS ESC TO RESUME</p>
+        <button id="menu-btn">RESUME</button>
+    </div>
+
+    <script>
+        const CHARACTERS = [
+            { id: 'scout', name: 'SCOUT', icon: '⚡', desc: 'Fast Speed, Low HP', stats: { hp: 80, speed: 14.0, damage: 1, fireRate: 0.5, jumpForce: 15, type: 'normal' } },
+            { id: 'heavy', name: 'HEAVY', icon: '🛡️', desc: 'High HP, Slow', stats: { hp: 200, speed: 8.0, damage: 2, fireRate: 0.8, jumpForce: 12, type: 'normal' } },
+            { id: 'commando', name: 'COMMANDO', icon: '🔫', desc: 'Fast Fire', stats: { hp: 120, speed: 10.0, damage: 0.8, fireRate: 0.25, jumpForce: 15, type: 'normal' } },
+            { id: 'jumper', name: 'JUMPER', icon: '🚀', desc: 'High Jump', stats: { hp: 100, speed: 10.0, damage: 1, fireRate: 0.5, jumpForce: 25, type: 'normal' } },
+            { id: 'volt', name: 'VOLT', icon: '🌩️', desc: 'Chain Lightning', stats: { hp: 70, speed: 9.0, damage: 2.4, fireRate: 0.8, jumpForce: 15, type: 'volt' } },
+            { id: 'plague', name: 'PLAGUE', icon: '☣️', desc: 'Poison DoT', stats: { hp: 110, speed: 13.0, damage: 0.5, fireRate: 0.4, jumpForce: 15, type: 'plague' } },
+            { id: 'shotgun', name: 'SHOTGUN', icon: '💥', desc: 'High Close Dmg', stats: { hp: 150, speed: 10.0, damage: 5, fireRate: 1.0, jumpForce: 15, type: 'shotgun' } }
+        ];
+
+        const SKILLS = [
+            { id: 'heal', name: 'HEAL', icon: '❤️', desc: 'Heal 50 HP' },
+            { id: 'pulse', name: 'SHOCKWAVE', icon: '🌊', desc: 'Damage Enemies' },
+            { id: 'overclock', name: 'OVERCLOCK', icon: '🔥', desc: 'Rapid Fire (5s)' },
+            { id: 'timelock', name: 'TIME LOCK', icon: '⏱️', desc: 'Freeze (5s)' },
+            { id: 'warp', name: 'WARP', icon: '🌀', desc: 'Teleport' },
+            { id: 'gale', name: 'GALE', icon: '💨', desc: 'Push & Dmg 2' },
+            { id: 'scan', name: 'SCAN', icon: '👁️', desc: 'See Through Walls' }
+        ];
+
+        const ELITE_UPGRADES = [
+            { id: 'orbital', name: 'ORBITAL', icon: '🛰️', desc: 'Attack Satellite' },
+            { id: 'giantslayer', name: 'GIANT SLAYER', icon: '🗡️', desc: 'Bonus Dmg to Boss' },
+            { id: 'rhythm', name: 'RHYTHM', icon: '🎵', desc: 'Every 5th Shot 2x Dmg' },
+            { id: 'multishot', name: 'MULTISHOT', icon: '🍒', desc: '+1 Projectile' },
+            { id: 'light', name: 'LIGHT', icon: '💡', desc: 'Brighter Map' }
+        ];
+
+        const ENEMY_TYPES = {
+            BASIC: { color: 0xff0000, hp: 3, damage: 5, speed: 4.0, xp: 20, scale: 1.0, type: 'basic', shape: 'box' },
+            RUNNER: { color: 0xffff00, hp: 1, damage: 3, speed: 8.0, xp: 10, scale: 0.7, type: 'runner', shape: 'cone' },
+            TANK: { color: 0x0000ff, hp: 15, damage: 10, speed: 2.0, xp: 50, scale: 1.5, type: 'tank', shape: 'dodeca' },
+            TOTEM: { color: 0x00ff00, hp: 20, damage: 0, speed: 0.0, xp: 100, scale: 1.5, type: 'totem', shape: 'pyramid' }
+        };
+
+        const BOSS_TYPES = {
+            OVERLORD: { name: "THE OVERLORD", color: 0xff0000, scale: 4.0, hp: 1500, speed: 1.5, damage: 50, type: 'boss_overlord' },
+            KING_SLIME: { name: "KING SLIME", color: 0x00ff00, scale: 3.0, hp: 1000, speed: 3.5, damage: 15, type: 'boss_slime' },
+            CANNON: { name: "DOOM CANNON", color: 0x555555, scale: 3.5, hp: 800, speed: 0.5, damage: 20, type: 'boss_cannon' }
+        };
+
+        const GRAVITY = 30.0;
+        const TILE_SIZE = 10;
+        const WALL_HEIGHT = 6;
+        const BOSS_SPAWN_TIME = 180;
+
+        let scene, camera, renderer, clock;
+        let ambientLightObj;
+        let elapsedTime = 0;
+        let stage = 1;
+
+        let selectedCharIndex = 0;
+        let selectedSkillIndex = 1;
+
+        let player = { hp: 100, maxHp: 100, speed: 10.0, damage: 1, fireRate: 0.5, jumpForce: 15, lastShot: 0, level: 1, xp: 0, nextLevelXp: 100, kills: 0, velocity: new THREE.Vector3(), canJump: false, skillReady: true, skillCooldown: 10.0, type: 'normal' };
+        let keys = { w: false, a: false, s: false, d: false, space: false, shift: false };
+
+        let objects = [];
+        let enemies = [];
+        let enemyBullets = [];
+        let gun, boss, orbital;
+
+        let isPlaying = false, isPaused = false, isLevelUpState = false;
+        let isGameOver = false;
+        let isOverclocked = false, isTimeFrozen = false, isScanning = false;
+
+        let hasOrbital = false;
+        let hasGiantSlayer = false;
+        let hasRhythm = false;
+        let hasMultishot = false;
+        let lightLevel = 0;
+        let shotsFiredCount = 0;
+
+        let isMouseDown = false;
+        let levelUpOpenTime = 0;
+        const INPUT_LOCK_DELAY = 500;
+
+        let currentUpgrades = [], selectedCardIndex = -1;
+
+        const rawMap = [
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1],
+            [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+            [1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1],
+            [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+            [1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        ];
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function init() {
+            initLobby();
+            clock = new THREE.Clock();
+            scene = new THREE.Scene(); scene.background = new THREE.Color(0x0D0D0D); scene.fog = new THREE.Fog(0x0D0D0D, 0, 60);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000); camera.rotation.order = 'YXZ';
+            renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setSize(window.innerWidth, window.innerHeight); renderer.shadowMap.enabled = true; document.body.appendChild(renderer.domElement);
+
+            ambientLightObj = new THREE.AmbientLight(0x585858);
+            scene.add(ambientLightObj);
+
+            const flashLight = new THREE.SpotLight(0xffffff, 0.8, 60, Math.PI / 4, 0.5, 1); camera.add(flashLight); flashLight.position.set(0, 0, 1); flashLight.target.position.set(0, 0, -1); scene.add(camera);
+
+            const floorGeo = new THREE.PlaneGeometry(2000, 2000); const floorMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 }); const floor = new THREE.Mesh(floorGeo, floorMat); floor.rotation.x = -Math.PI / 2; scene.add(floor);
+
+            createGun(); generateMap();
+
+            document.addEventListener('keydown', onKeyDown); document.addEventListener('keyup', onKeyUp);
+            document.addEventListener('mousedown', onMouseDown); document.addEventListener('mouseup', onMouseUp);
+            document.addEventListener('mousemove', onMouseMove); window.addEventListener('resize', onWindowResize); document.addEventListener('pointerlockchange', onPointerLockChange);
+
+            document.getElementById('menu-btn').onclick = null;
+
+            animate();
+        }
+
+        function initLobby() {
+            const charGrid = document.getElementById('char-grid'); const skillGrid = document.getElementById('skill-grid');
+            CHARACTERS.forEach((char, idx) => {
+                const el = document.createElement('div'); el.className = `select-card ${idx === 0 ? 'selected' : ''}`; el.id = `char-card-${idx}`;
+                el.innerHTML = `<div class="sel-icon">${char.icon}</div><div class="sel-name">${char.name}</div><div class="sel-desc">${char.desc}</div>`;
+                el.onclick = () => selectLobbyItem('char', idx); charGrid.appendChild(el);
+            });
+            SKILLS.forEach((skill, idx) => {
+                const el = document.createElement('div'); el.className = `select-card ${idx === 1 ? 'selected' : ''}`; el.id = `skill-card-${idx}`;
+                el.innerHTML = `<div class="sel-icon">${skill.icon}</div><div class="sel-name">${skill.name}</div><div class="sel-desc">${skill.desc}</div>`;
+                el.onclick = () => selectLobbyItem('skill', idx); skillGrid.appendChild(el);
+            });
+            document.getElementById('lobby-start-btn').onclick = startGame;
+        }
+
+        function selectLobbyItem(type, idx) {
+            if (type === 'char') {
+                selectedCharIndex = idx; document.querySelectorAll('#char-grid .select-card').forEach(c => c.classList.remove('selected')); document.getElementById(`char-card-${idx}`).classList.add('selected');
+            } else {
+                selectedSkillIndex = idx; document.querySelectorAll('#skill-grid .select-card').forEach(c => c.classList.remove('selected')); document.getElementById(`skill-card-${idx}`).classList.add('selected');
+            }
+            playSound('ui_select');
+        }
+
+        function createGun() { const geo = new THREE.BoxGeometry(0.2, 0.2, 1.0); const mat = new THREE.MeshStandardMaterial({ color: 0x333333 }); gun = new THREE.Mesh(geo, mat); gun.position.set(0.3, -0.4, -0.6); camera.add(gun); }
+
+        function generateMap() {
+            const boxGeo = new THREE.BoxGeometry(TILE_SIZE, WALL_HEIGHT * 2, TILE_SIZE); const wallMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.9 });
+            for (let z = 0; z < rawMap.length; z++) {
+                for (let x = 0; x < rawMap[z].length; x++) {
+                    if (rawMap[z][x] === 1) { const wall = new THREE.Mesh(boxGeo, wallMat); wall.position.set((x - rawMap[0].length / 2) * TILE_SIZE, WALL_HEIGHT, (z - rawMap.length / 2) * TILE_SIZE); scene.add(wall); objects.push(wall); }
+                    else if (rawMap[z][x] === 0 && x === 1 && z === 1) camera.position.set((x - rawMap[0].length / 2) * TILE_SIZE, 2, (z - rawMap.length / 2) * TILE_SIZE);
+                }
+            }
+        }
+
+        function startGame() {
+            document.getElementById('lobby-screen').style.display = 'none';
+            document.body.requestPointerLock();
+
+            const baseStats = CHARACTERS[selectedCharIndex].stats;
+            player = {
+                ...player, ...baseStats, maxHp: baseStats.hp, level: 1, xp: 0, nextLevelXp: 100, kills: 0, skillReady: true
+            };
+
+            hasOrbital = false; hasGiantSlayer = false; hasRhythm = false; hasMultishot = false; lightLevel = 0;
+            ambientLightObj.intensity = 1.0;
+            if (orbital) { scene.remove(orbital); orbital = null; }
+
+            stage = 1;
+            initStage();
+        }
+
+        function initStage() {
+            const skillId = SKILLS[selectedSkillIndex].id;
+            if (skillId === 'overclock') player.skillCooldown = 20.0;
+            else if (skillId === 'timelock') player.skillCooldown = 25.0;
+            else if (skillId === 'warp') player.skillCooldown = 10.0;
+            else if (skillId === 'scan') player.skillCooldown = 15.0;
+            else player.skillCooldown = 5.0;
+
+            elapsedTime = 0;
+            enemies.forEach(e => scene.remove(e)); enemies = [];
+            enemyBullets.forEach(b => scene.remove(b)); enemyBullets = [];
+            if (boss) { scene.remove(boss); boss = null; }
+
+            let safe = false;
+            while (!safe) {
+                const rZ = Math.floor(Math.random() * rawMap.length); const rX = Math.floor(Math.random() * rawMap[0].length);
+                if (rawMap[rZ][rX] === 0) { camera.position.set((rX - rawMap[0].length / 2) * TILE_SIZE, 2, (rZ - rawMap.length / 2) * TILE_SIZE); safe = true; }
+            }
+
+            document.getElementById('boss-hud').style.display = 'none';
+            document.getElementById('skill-name-display').innerText = `SKILL: ${SKILLS[selectedSkillIndex].name} (SHIFT)`;
+
+            isPlaying = true; isPaused = false; isLevelUpState = false; isOverclocked = false; isTimeFrozen = false; isGameOver = false; isScanning = false;
+            isMouseDown = false;
+
+            updateHUD();
+            for (let i = 0; i < 5; i++) spawnEnemy();
+
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('elite-screen').style.display = 'none';
+        }
+
+        function goToLobby() {
+            isPlaying = false; isGameOver = false;
+            document.exitPointerLock();
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('lobby-screen').style.display = 'flex';
+        }
+
+        function spawnEnemy() {
+            if (boss) return;
+            let posX, posZ, safe = false;
+            while (!safe) {
+                const rZ = Math.floor(Math.random() * rawMap.length); const rX = Math.floor(Math.random() * rawMap[0].length);
+                if (rawMap[rZ][rX] === 0) { posX = (rX - rawMap[0].length / 2) * TILE_SIZE; posZ = (rZ - rawMap.length / 2) * TILE_SIZE; if (new THREE.Vector3(posX, 0, posZ).distanceTo(camera.position) > 20) safe = true; }
+            }
+            let type = ENEMY_TYPES.BASIC;
+            const difficulty = Math.min(1.0, elapsedTime / BOSS_SPAWN_TIME);
+            const rand = Math.random();
+
+            if (difficulty > 0.5 && rand < 0.2) type = ENEMY_TYPES.TANK;
+            else if (difficulty > 0.2 && rand < 0.4) type = ENEMY_TYPES.RUNNER;
+            else if (difficulty > 0.3 && rand > 0.9) type = ENEMY_TYPES.TOTEM;
+
+            let geo;
+            if (type.shape === 'cone') geo = new THREE.ConeGeometry(1 * type.scale, 4 * type.scale, 8);
+            else if (type.shape === 'dodeca') geo = new THREE.DodecahedronGeometry(2 * type.scale, 0);
+            else if (type.shape === 'pyramid') geo = new THREE.ConeGeometry(2 * type.scale, 4 * type.scale, 4);
+            else geo = new THREE.BoxGeometry(2 * type.scale, 4 * type.scale, 2 * type.scale);
+
+            const mat = new THREE.MeshStandardMaterial({
+                color: type.color,
+                emissive: 0x111111,
+                depthTest: !isScanning,
+                depthWrite: !isScanning,
+                transparent: isScanning,
+                opacity: isScanning ? 0.8 : 1.0
+            });
+
+            const enemy = new THREE.Mesh(geo, mat);
+            enemy.position.set(posX, type.shape === 'dodeca' ? 2 * type.scale : 2 * type.scale, posZ);
+            if (isScanning) enemy.renderOrder = 999;
+
+            const multiplier = 1 + (stage - 1) * 0.45;
+            enemy.userData = { ...type };
+            enemy.userData.hp = Math.floor((type.hp + Math.floor(elapsedTime / 30)) * multiplier);
+            enemy.userData.damage = Math.floor(type.damage * multiplier);
+            // XP Scaling applied
+            enemy.userData.xp = Math.floor(type.xp * (1 + (stage - 1) * 0.5));
+
+            if (type.type === 'totem') enemy.userData.speed = 0;
+
+            scene.add(enemy); enemies.push(enemy);
+        }
+
+        function spawnBoss() {
+            const keys = Object.keys(BOSS_TYPES);
+            const randomKey = keys[Math.floor(Math.random() * keys.length)];
+            const bossType = BOSS_TYPES[randomKey];
+
+            let geo;
+            if (bossType.type === 'boss_overlord') geo = new THREE.IcosahedronGeometry(8, 1);
+            else if (bossType.type === 'boss_slime') geo = new THREE.SphereGeometry(6, 32, 32);
+            else if (bossType.type === 'boss_cannon') geo = new THREE.BoxGeometry(6, 6, 6);
+
+            const mat = new THREE.MeshStandardMaterial({ color: bossType.color, emissive: 0x440000, wireframe: false });
+            boss = new THREE.Mesh(geo, mat);
+            boss.position.set(0, 8, 0);
+
+            const multiplier = 1 + (stage - 1) * 0.65;
+            const hp = Math.floor(bossType.hp * multiplier);
+
+            boss.userData = {
+                ...bossType,
+                hp: hp, maxHp: hp,
+                damage: Math.floor(bossType.damage * multiplier),
+                shootTimer: 0
+            };
+
+            scene.add(boss);
+            document.getElementById('boss-name').innerText = `☠️ ${bossType.name} ☠️`;
+            document.getElementById('boss-hud').style.display = 'flex';
+            playSound('boss_spawn');
+        }
+
+        function spawnSlimeMinion(parentPos) {
+            const geo = new THREE.SphereGeometry(2, 16, 16);
+            const mat = new THREE.MeshStandardMaterial({ color: 0x00aa00, emissive: 0x002200 });
+            const minion = new THREE.Mesh(geo, mat);
+            minion.position.copy(parentPos);
+            minion.position.x += (Math.random() - 0.5) * 10;
+            minion.position.z += (Math.random() - 0.5) * 10;
+
+            const multiplier = 1 + (stage - 1) * 0.45;
+            minion.userData = {
+                hp: Math.floor(200 * multiplier),
+                speed: 6.0,
+                damage: Math.floor(8 * multiplier),
+                type: 'basic'
+            };
+            scene.add(minion); enemies.push(minion);
+        }
+
+        function fireBossProjectile(origin) {
+            const geo = new THREE.SphereGeometry(1, 8, 8);
+            const mat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+            const bullet = new THREE.Mesh(geo, mat);
+            bullet.position.copy(origin);
+
+            const target = camera.position.clone(); target.y -= 1;
+            const dir = new THREE.Vector3().subVectors(target, origin).normalize();
+            bullet.userData = { velocity: dir.multiplyScalar(15), life: 5.0 };
+
+            scene.add(bullet); enemyBullets.push(bullet);
+            playSound('shoot');
+        }
+
+        function useSkill() {
+            if (!player.skillReady || isPaused || isLevelUpState) return;
+            const skillId = SKILLS[selectedSkillIndex].id;
+
+            if (skillId === 'heal') { player.hp = Math.min(player.hp + 50, player.maxHp); playSound('recharge'); }
+            else if (skillId === 'pulse') {
+                const targets = boss ? [boss, ...enemies] : enemies;
+                targets.forEach(e => {
+                    if (e.position.distanceTo(camera.position) < 25) {
+                        e.userData.hp -= 9; // Reduced damage to 9
+                        if (e.userData.hp <= 0) killEnemy(e);
+                    }
+                }); playSkillEffect();
+            } else if (skillId === 'gale') {
+                const targets = boss ? [boss, ...enemies] : enemies;
+                const playerDir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
+                targets.forEach(e => {
+                    const toEnemy = new THREE.Vector3().subVectors(e.position, camera.position).normalize();
+                    if (playerDir.dot(toEnemy) > 0.5 && e.position.distanceTo(camera.position) < 40) {
+                        e.userData.hp -= 2;
+                        e.position.addScaledVector(toEnemy, 30);
+                        if (e.userData.hp <= 0) killEnemy(e);
+                    }
+                });
+                playSkillEffect();
+            } else if (skillId === 'scan') {
+                isScanning = true;
+                enemies.forEach(e => {
+                    e.material.depthTest = false; e.material.depthWrite = false; e.material.transparent = true; e.material.opacity = 0.8; e.renderOrder = 999; e.material.emissive.setHex(0x00ff00);
+                });
+                playSound('skill');
+                setTimeout(() => {
+                    isScanning = false;
+                    enemies.forEach(e => {
+                        e.material.depthTest = true; e.material.depthWrite = true; e.material.transparent = false; e.material.opacity = 1.0; e.renderOrder = 0; e.material.emissive.setHex(0x111111);
+                    });
+                }, 5000);
+            } else if (skillId === 'overclock') { isOverclocked = true; playSkillEffect(); setTimeout(() => { isOverclocked = false; }, 5000); }
+            else if (skillId === 'timelock') { isTimeFrozen = true; document.getElementById('time-freeze-overlay').style.opacity = 1; playSound('skill'); setTimeout(() => { isTimeFrozen = false; document.getElementById('time-freeze-overlay').style.opacity = 0; }, 5000); }
+            else if (skillId === 'warp') { warpPlayer(); playSkillEffect(); }
+
+            player.skillReady = false; document.getElementById('skill-bar').style.width = '0%';
+            let cd = 0;
+            const interval = setInterval(() => { if (isPaused) return; cd += 0.1; const pct = Math.min(100, (cd / player.skillCooldown) * 100); document.getElementById('skill-bar').style.width = pct + '%'; if (cd >= player.skillCooldown) { clearInterval(interval); player.skillReady = true; if (!isLevelUpState) playSound('recharge'); } }, 100);
+        }
+
+        function warpPlayer() {
+            let safe = false, attempts = 0;
+            while (!safe && attempts < 50) {
+                const rZ = Math.floor(Math.random() * rawMap.length); const rX = Math.floor(Math.random() * rawMap[0].length);
+                if (rawMap[rZ][rX] === 0) { camera.position.set((rX - rawMap[0].length / 2) * TILE_SIZE, 2, (rZ - rawMap.length / 2) * TILE_SIZE); safe = true; } attempts++;
+            }
+        }
+
+        function playSkillEffect() { playSound('skill'); document.getElementById('skill-overlay').style.opacity = 1; setTimeout(() => document.getElementById('skill-overlay').style.opacity = 0, 500); }
+
+        function shoot() {
+            const effectiveFireRate = isOverclocked ? 0.05 : player.fireRate;
+            const now = clock.getElapsedTime(); if (now - player.lastShot < effectiveFireRate) return; player.lastShot = now;
+
+            shotsFiredCount++;
+            let dmgMultiplier = 1;
+            if (hasRhythm && shotsFiredCount % 5 === 0) dmgMultiplier = 2;
+
+            const shots = hasMultishot ? 2 : 1;
+            for (let s = 0; s < shots; s++) {
+                playSound('shoot');
+                gun.position.z = -0.3; setTimeout(() => gun.position.z = -0.6, 50);
+
+                const raycaster = new THREE.Raycaster();
+
+                if (s > 0) {
+                    const offset = new THREE.Vector2((Math.random() - 0.5) * 0.1, (Math.random() - 0.5) * 0.1);
+                    raycaster.setFromCamera(offset, camera);
+                } else {
+                    raycaster.setFromCamera({ x: 0, y: 0 }, camera);
+                }
+
+                const targets = boss ? [boss, ...enemies] : enemies; const intersects = raycaster.intersectObjects(targets);
+                if (intersects.length > 0) {
+                    const hitObj = intersects[0].object;
+                    const dist = hitObj.position.distanceTo(camera.position);
+
+                    let damage = player.damage * dmgMultiplier;
+
+                    if (player.type === 'shotgun') {
+                        const dropoff = Math.max(0.2, 1.0 - (dist / 30));
+                        damage *= dropoff;
+                    }
+
+                    if (hasGiantSlayer && hitObj === boss) damage *= 1.5;
+
+                    hitObj.userData.hp -= damage;
+                    createParticles(intersects[0].point, 0xffff00);
+
+                    if (player.type === 'plague') {
+                        hitObj.userData.poisonTicks = (hitObj.userData.poisonTicks || 0) + 3;
+                        hitObj.material.color.setHex(0x00ff00);
+                    }
+
+                    if (player.type === 'volt') {
+                        createParticles(intersects[0].point, 0x00ffff);
+                        enemies.forEach(e => {
+                            if (e !== hitObj && e.position.distanceTo(hitObj.position) < 15) {
+                                e.userData.hp -= damage * 0.3;
+                                if (e.userData.hp <= 0) killEnemy(e);
+                                createParticles(e.position, 0x00ffff);
+                            }
+                        });
+                    }
+
+                    if (hitObj.userData.hp <= 0) killEnemy(hitObj); else { if (!isScanning) hitObj.material.emissive.setHex(0xffffff); setTimeout(() => { if (!isScanning) hitObj.material.emissive.setHex(0x000000); }, 100); }
+                }
+            }
+        }
+
+        function killEnemy(obj) {
+            if (obj === boss) { winGame(); return; }
+            createParticles(obj.position, obj.material.color.getHex()); scene.remove(obj); enemies = enemies.filter(e => e !== obj); player.kills++; gainXp(obj.userData.xp); playSound('kill');
+        }
+        function createParticles(pos, color) { const geo = new THREE.BoxGeometry(0.3, 0.3, 0.3); const mat = new THREE.MeshBasicMaterial({ color: color }); for (let i = 0; i < 5; i++) { const p = new THREE.Mesh(geo, mat); p.position.copy(pos); p.userData.vel = new THREE.Vector3((Math.random() - 0.5), Math.random(), (Math.random() - 0.5)); scene.add(p); setTimeout(() => scene.remove(p), 300); } }
+
+        function gainXp(amount) { player.xp += amount; if (player.xp >= player.nextLevelXp) { player.level++; player.xp -= player.nextLevelXp; player.nextLevelXp = Math.floor(player.nextLevelXp * 1.2); showLevelUpScreen(); } updateHUD(); }
+
+        function showLevelUpScreen() {
+            isLevelUpState = true; isPaused = true; document.exitPointerLock();
+            levelUpOpenTime = Date.now(); isMouseDown = false;
+            const screen = document.getElementById('levelup-screen'); const container = document.getElementById('cards-container'); container.innerHTML = ''; screen.style.display = 'flex'; playSound('levelup');
+
+            // Nerfed Upgrades
+            const upgrades = [
+                { name: "DAMAGE UP", desc: "Increase Damage", icon: "⚔️", apply: () => player.damage += 0.5 },
+                { name: "RAPID FIRE", desc: "Increase Fire Rate", icon: "🔫", apply: () => player.fireRate *= 0.9 },
+                { name: "SPEED UP", desc: "Move Faster", icon: "⚡", apply: () => player.speed += 1.5 },
+                { name: "MAX HP UP", desc: "Heal & Boost HP", icon: "❤️", apply: () => { player.maxHp += 30; player.hp = player.maxHp; } }
+            ];
+            currentUpgrades = upgrades.sort(() => 0.5 - Math.random()).slice(0, 3); selectedCardIndex = -1;
+            currentUpgrades.forEach((upgrade, index) => {
+                const card = document.createElement('div'); card.className = 'upgrade-card locked'; card.id = `card-${index}`;
+                card.innerHTML = `<div class="key-hint">${index + 1}</div><div class="card-icon">${upgrade.icon}</div><div class="card-name">${upgrade.name}</div><div class="card-desc">${upgrade.desc}</div>`;
+                card.onclick = () => { if (Date.now() - levelUpOpenTime < INPUT_LOCK_DELAY) return; selectCard(index); confirmUpgrade(); };
+                container.appendChild(card);
+            });
+            setTimeout(() => { document.querySelectorAll('.upgrade-card').forEach(c => c.classList.remove('locked')); }, INPUT_LOCK_DELAY);
+        }
+
+        function selectCard(index) {
+            if (Date.now() - levelUpOpenTime < INPUT_LOCK_DELAY) return;
+            if (index < 0 || index >= currentUpgrades.length) return;
+            selectedCardIndex = index; for (let i = 0; i < 3; i++) document.getElementById(`card-${i}`).classList.remove('selected'); document.getElementById(`card-${index}`).classList.add('selected'); playSound('ui_select');
+        }
+
+        function confirmUpgrade() {
+            if (selectedCardIndex === -1) return;
+            currentUpgrades[selectedCardIndex].apply(); document.getElementById('levelup-screen').style.display = 'none'; isLevelUpState = false; isPaused = false; document.body.requestPointerLock(); updateHUD(); playSound('ui_confirm');
+        }
+
+        function updatePlayer(delta) {
+            player.velocity.x -= player.velocity.x * 10.0 * delta; player.velocity.z -= player.velocity.z * 10.0 * delta; player.velocity.y -= GRAVITY * delta;
+            const direction = new THREE.Vector3(); const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); forward.y = 0; forward.normalize(); const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion); right.y = 0; right.normalize();
+            if (keys.w) direction.add(forward); if (keys.s) direction.sub(forward); if (keys.d) direction.add(right); if (keys.a) direction.sub(right);
+            if (direction.lengthSq() > 0) { direction.normalize(); player.velocity.addScaledVector(direction, player.speed * delta * 10); }
+            const moveX = player.velocity.x * delta; const nextPos = camera.position.clone(); nextPos.x += moveX; if (!checkCollision(nextPos)) camera.position.x += moveX; else player.velocity.x = 0;
+            const moveZ = player.velocity.z * delta; nextPos.copy(camera.position); nextPos.z += moveZ; if (!checkCollision(nextPos)) camera.position.z += moveZ; else player.velocity.z = 0;
+            camera.position.y += player.velocity.y * delta; if (camera.position.y < 2) { player.velocity.y = 0; camera.position.y = 2; player.canJump = true; }
+            if (keys.space && player.canJump) { player.velocity.y = player.jumpForce; player.canJump = false; }
+            if (direction.lengthSq() > 0) { const t = Date.now() * 0.015; gun.position.y = -0.4 + Math.sin(t) * 0.02; gun.position.x = 0.3 + Math.cos(t * 0.5) * 0.02; }
+
+            // ORBITAL update
+            if (hasOrbital) {
+                if (!orbital) {
+                    const geo = new THREE.SphereGeometry(0.5); const mat = new THREE.MeshBasicMaterial({ color: 0xffff00 }); orbital = new THREE.Mesh(geo, mat); scene.add(orbital);
+                }
+                const t = Date.now() * 0.002;
+                orbital.position.set(camera.position.x + Math.cos(t) * 5, camera.position.y, camera.position.z + Math.sin(t) * 5);
+                enemies.forEach(e => {
+                    if (e.position.distanceTo(orbital.position) < 2) {
+                        e.userData.hp -= 1;
+                        if (e.userData.hp <= 0) killEnemy(e);
+                    }
+                });
+            }
+        }
+
+        function checkCollision(newPos) { const playerRadius = 0.5; const wallSize = TILE_SIZE / 2; for (let obj of objects) { const distX = Math.abs(newPos.x - obj.position.x); const distZ = Math.abs(newPos.z - obj.position.z); if (distX < wallSize + playerRadius && distZ < wallSize + playerRadius) return true; } return false; }
+
+        function updateEnemies(delta) {
+            if (isTimeFrozen) return;
+            const targets = boss ? [boss, ...enemies] : enemies;
+            const totems = enemies.filter(e => e.userData.type === 'totem');
+
+            targets.forEach(e => {
+                if (e.userData.poisonTicks > 0) {
+                    e.userData.poisonTimer = (e.userData.poisonTimer || 0) + delta;
+                    if (e.userData.poisonTimer >= 0.3) {
+                        e.userData.hp -= 3; e.userData.poisonTicks--; e.userData.poisonTimer = 0;
+                        if (e.userData.hp <= 0) killEnemy(e);
+                    }
+                }
+
+                let buffed = false;
+                totems.forEach(t => { if (t !== e && e.position.distanceTo(t.position) < 20) buffed = true; });
+                if (!isScanning) e.material.emissive.setHex(buffed ? 0x004400 : 0x111111);
+                const damageMultiplier = buffed ? 2.0 : 1.0;
+
+                if (e.userData.type === 'totem') return;
+
+                // --- 보스 AI 업데이트 ---
+                if (e === boss) {
+                    const bossType = e.userData.type;
+
+                    const dist = e.position.distanceTo(camera.position);
+                    const dir = new THREE.Vector3().subVectors(camera.position, e.position).normalize();
+                    e.position.addScaledVector(dir, e.userData.speed * delta);
+
+                    if (bossType === 'boss_slime') {
+                        if (e.userData.hp < e.userData.maxHp * 0.5 && !e.userData.hasSplit) {
+                            e.userData.hasSplit = true;
+                            spawnSlimeMinion(e.position);
+                            spawnSlimeMinion(e.position);
+                        }
+                    } else if (bossType === 'boss_cannon') {
+                        e.userData.shootTimer += delta;
+                        if (e.userData.shootTimer > 5.0) {
+                            fireBossProjectile(e.position);
+                            setTimeout(() => fireBossProjectile(e.position), 300);
+                            e.userData.shootTimer = 0;
+                        }
+                    }
+
+                    if (dist < 8) takeDamage(e.userData.damage * delta * 2);
+                    return;
+                }
+
+                const dist = e.position.distanceTo(camera.position);
+                e.lookAt(camera.position.x, 2, camera.position.z);
+                if (dist > 2.5) {
+                    const dir = new THREE.Vector3().subVectors(camera.position, e.position).normalize(); const moveDist = e.userData.speed * delta; const nextPos = e.position.clone().addScaledVector(dir, moveDist);
+                    if (!checkCollision(nextPos)) e.position.copy(nextPos); else { let slide = e.position.clone(); slide.x += dir.x * moveDist; if (!checkCollision(slide)) e.position.x += dir.x * moveDist; else { slide = e.position.clone(); slide.z += dir.z * moveDist; if (!checkCollision(slide)) e.position.z += dir.z * moveDist; } }
+                } else takeDamage(e.userData.damage * delta * damageMultiplier);
+            });
+
+            for (let i = enemyBullets.length - 1; i >= 0; i--) {
+                const b = enemyBullets[i];
+                b.position.addScaledVector(b.userData.velocity, delta);
+                b.userData.life -= delta;
+
+                if (b.userData.life <= 0) {
+                    scene.remove(b);
+                    enemyBullets.splice(i, 1);
+                } else {
+                    const dist = b.position.distanceTo(camera.position);
+                    if (dist < 2.0) {
+                        takeDamage(20);
+                        scene.remove(b);
+                        enemyBullets.splice(i, 1);
+                    }
+                }
+            }
+        }
+
+        function takeDamage(amount) {
+            player.hp -= amount;
+            document.getElementById('damage-overlay').style.opacity = 1;
+            setTimeout(() => document.getElementById('damage-overlay').style.opacity = 0, 100);
+            if (player.hp <= 0) handleGameOver();
+        }
+
+        function handleGameOver() {
+            isPlaying = false; isGameOver = true; document.exitPointerLock();
+            const menu = document.getElementById('menu'); const title = document.getElementById('menu-title'); const btn = document.getElementById('menu-btn'); const desc = document.getElementById('menu-desc');
+            menu.style.display = 'flex'; title.innerText = "YOU DIED"; title.style.color = "#f00"; desc.innerText = "RETURN TO LOBBY?"; btn.innerText = "MAIN MENU";
+            btn.onclick = goToLobby;
+        }
+
+        function winGame() {
+            playSound('levelup');
+            const reward = ELITE_UPGRADES[Math.floor(Math.random() * ELITE_UPGRADES.length)];
+            showEliteReward(reward);
+        }
+
+        function showEliteReward(reward) {
+            isLevelUpState = true; isPaused = true; document.exitPointerLock();
+            const screen = document.getElementById('elite-screen');
+            const container = document.getElementById('elite-card-container');
+            container.innerHTML = '';
+            screen.style.display = 'flex';
+
+            const card = document.createElement('div'); card.className = 'upgrade-card elite';
+            card.innerHTML = `<div class="card-icon">${reward.icon}</div><div class="card-name">${reward.name}</div><div class="card-desc">${reward.desc}</div>`;
+            container.appendChild(card);
+
+            if (reward.id === 'orbital') hasOrbital = true;
+            if (reward.id === 'giantslayer') hasGiantSlayer = true;
+            if (reward.id === 'rhythm') hasRhythm = true;
+            if (reward.id === 'multishot') hasMultishot = true;
+            if (reward.id === 'light') { lightLevel++; ambientLightObj.intensity += 0.3; }
+
+            setTimeout(() => {
+                screen.style.display = 'none';
+                showStageClearMenu();
+            }, 2500);
+        }
+
+        function showStageClearMenu() {
+            isPlaying = false; isGameOver = true;
+            const menu = document.getElementById('menu'); const title = document.getElementById('menu-title'); const btn = document.getElementById('menu-btn'); const desc = document.getElementById('menu-desc');
+            menu.style.display = 'flex'; title.innerText = "STAGE CLEARED"; title.style.color = "#0f0"; desc.innerText = `NEXT STAGE: ${stage + 1} (DIFFICULTY UP)`; btn.innerText = "NEXT STAGE";
+            btn.onclick = () => { stage++; document.body.requestPointerLock(); initStage(); };
+        }
+
+        function handleMenuClick() {
+            const btn = document.getElementById('menu-btn');
+            if (btn.innerText === "RESUME") { document.body.requestPointerLock(); }
+            else if (btn.innerText === "MAIN MENU") { goToLobby(); }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate); const delta = clock.getDelta();
+            if (isPlaying && !isPaused && !isLevelUpState) {
+                elapsedTime += delta;
+                if (isMouseDown) shoot();
+                if (!boss && elapsedTime > BOSS_SPAWN_TIME) spawnBoss();
+                const spawnInterval = Math.max(0.5, 2.0 - (elapsedTime / 300));
+                if (Math.random() < (delta / spawnInterval)) spawnEnemy();
+                updatePlayer(delta); updateEnemies(delta); updateHUD();
+                if (boss && !isTimeFrozen) { boss.rotation.x += delta; boss.rotation.y += delta; }
+            }
+            renderer.render(scene, camera);
+        }
+
+        function updateHUD() {
+            const mins = Math.floor(elapsedTime / 60).toString().padStart(2, '0'); const secs = Math.floor(elapsedTime % 60).toString().padStart(2, '0');
+            document.getElementById('time-display').innerText = `${mins}:${secs}`;
+            document.getElementById('level-display').innerText = player.level;
+            document.getElementById('kill-display').innerText = player.kills;
+            document.getElementById('stage-display').innerText = stage;
+            document.getElementById('xp-bar').style.width = (player.xp / player.nextLevelXp) * 100 + '%';
+            document.getElementById('health-display').innerText = `HP: ${Math.floor(player.hp)} / ${player.maxHp}`;
+            if (boss) document.getElementById('boss-hp-bar').style.width = (boss.userData.hp / boss.userData.maxHp) * 100 + '%';
+        }
+        function onWindowResize() { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
+
+        function onKeyDown(e) {
+            if (isLevelUpState) { if (e.code === 'Digit1') selectCard(0); if (e.code === 'Digit2') selectCard(1); if (e.code === 'Digit3') selectCard(2); if (e.code === 'Enter' || e.code === 'NumpadEnter') confirmUpgrade(); return; }
+            switch (e.code) { case 'KeyW': keys.w = true; break; case 'KeyA': keys.a = true; break; case 'KeyS': keys.s = true; break; case 'KeyD': keys.d = true; break; case 'Space': keys.space = true; break; case 'ShiftLeft': useSkill(); break; }
+        }
+        function onKeyUp(e) { switch (e.code) { case 'KeyW': keys.w = false; break; case 'KeyA': keys.a = false; break; case 'KeyS': keys.s = false; break; case 'KeyD': keys.d = false; break; case 'Space': keys.space = false; break; } }
+
+        function onMouseDown() { if (isPlaying && !isPaused && !isLevelUpState) isMouseDown = true; }
+        function onMouseUp() { isMouseDown = false; }
+
+        function onMouseMove(e) { if (document.pointerLockElement === document.body && !isPaused && !isLevelUpState) { camera.rotation.y -= e.movementX * 0.002; camera.rotation.x -= e.movementY * 0.002; camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x)); } }
+
+        function onPointerLockChange() {
+            if (document.pointerLockElement === document.body) { isPaused = false; document.getElementById('menu').style.display = 'none'; }
+            else {
+                if (isPlaying && !isLevelUpState && !isGameOver) {
+                    isPaused = true; isMouseDown = false;
+                    const menu = document.getElementById('menu'); const title = document.getElementById('menu-title'); const btn = document.getElementById('menu-btn'); const desc = document.getElementById('menu-desc');
+                    menu.style.display = 'flex'; title.innerText = "PAUSED"; title.style.color = "#fff"; desc.innerText = "PRESS ESC TO RESUME"; btn.innerText = "RESUME"; btn.onclick = () => document.body.requestPointerLock();
+                }
+            }
+        }
+
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination); const now = audioCtx.currentTime;
+            if (type === 'shoot') { osc.type = 'square'; osc.frequency.setValueAtTime(150, now); gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1); osc.start(now); osc.stop(now + 0.1); }
+            else if (type === 'kill') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, now); gain.gain.setValueAtTime(0.1, now); osc.start(now); osc.stop(now + 0.2); }
+            else if (type === 'levelup') { osc.type = 'sine'; osc.frequency.setValueAtTime(400, now); osc.frequency.linearRampToValueAtTime(800, now + 0.2); gain.gain.setValueAtTime(0.2, now); osc.start(now); osc.stop(now + 0.4); }
+            else if (type === 'recharge') { osc.type = 'sine'; osc.frequency.setValueAtTime(600, now); gain.gain.setValueAtTime(0.1, now); osc.start(now); osc.stop(now + 0.2); }
+            else if (type === 'skill') { osc.type = 'triangle'; osc.frequency.setValueAtTime(50, now); osc.frequency.linearRampToValueAtTime(300, now + 0.5); gain.gain.setValueAtTime(0.3, now); osc.start(now); osc.stop(now + 0.5); }
+            else if (type === 'boss_spawn') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(50, now); gain.gain.setValueAtTime(0.5, now); osc.start(now); osc.stop(now + 2.0); }
+            else if (type === 'ui_select') { osc.type = 'sine'; osc.frequency.setValueAtTime(600, now); gain.gain.setValueAtTime(0.05, now); osc.start(now); osc.stop(now + 0.1); }
+            else if (type === 'ui_confirm') { osc.type = 'square'; osc.frequency.setValueAtTime(400, now); osc.frequency.linearRampToValueAtTime(800, now + 0.1); gain.gain.setValueAtTime(0.05, now); osc.start(now); osc.stop(now + 0.2); }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

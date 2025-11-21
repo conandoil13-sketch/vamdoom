@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>료칸의 파수꾼 (The Ryokan Keeper)</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=East+Sea+Dokdo&display=swap');
+
+        :root {
+            --bg-wood: #3b2e25;
+            --paper: #f0e6d2;
+            --ink: #2a2a2a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #111;
+            color: var(--ink);
+            font-family: 'Noto Serif KR', serif;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 1024px;
+            height: 95vh;
+            max-height: 800px;
+            background-color: var(--bg-wood);
+            position: relative;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+            border: 8px solid #221a15;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
+        /* --- View Area --- */
+        #view-area {
+            flex: 4.5;
+            background: #1a1a1a;
+            position: relative;
+            border-bottom: 10px solid #221a15;
+            overflow: hidden;
+            min-height: 200px;
+        }
+
+        .shoji-door {
+            position: absolute;
+            top: 0;
+            width: 50%;
+            height: 100%;
+            background: repeating-linear-gradient(90deg, #eec 0, #eec 40px, #432 40px, #432 42px);
+            border: 2px solid #432;
+            transition: transform 1s ease-in-out;
+            z-index: 5;
+        }
+
+        #door-left {
+            left: 0;
+            transform-origin: left;
+        }
+
+        #door-right {
+            right: 0;
+            transform-origin: right;
+        }
+
+        .door-open #door-left {
+            transform: translateX(-85%);
+        }
+
+        .door-open #door-right {
+            transform: translateX(85%);
+        }
+
+        /* 핏자국 효과 */
+        .bloodstain {
+            position: absolute;
+            top: 40%;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, #800 20%, transparent 70%);
+            opacity: 0.9;
+            filter: blur(5px);
+            z-index: 6;
+            display: none;
+            pointer-events: none;
+            mix-blend-mode: multiply;
+        }
+
+        #blood-left {
+            right: 5px;
+        }
+
+        /* 왼쪽 문 오른쪽 끝 */
+        #blood-right {
+            left: 5px;
+        }
+
+        /* 오른쪽 문 왼쪽 끝 */
+
+        #char-canvas {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            height: 95%;
+            max-width: 100%;
+            z-index: 2;
+        }
+
+        #dialogue-box {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70%;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 1.1rem;
+            z-index: 10;
+            display: none;
+            border: 1px solid #555;
+        }
+
+        /* --- Desk Area --- */
+        #desk-area {
+            flex: 5.5;
+            position: relative;
+            overflow: hidden;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%235c4033"/><path d="M0 0 L100 0" stroke="%234a332a" stroke-width="2"/></svg>');
+            box-shadow: inset 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .draggable {
+            position: absolute;
+            cursor: grab;
+            transition: transform 0.1s;
+            filter: drop-shadow(5px 5px 5px rgba(0, 0, 0, 0.3));
+        }
+
+        .draggable:active {
+            cursor: grabbing;
+            transform: scale(1.02);
+        }
+
+        /* Props */
+        #permit {
+            width: 220px;
+            height: 300px;
+            background: var(--paper);
+            top: 20px;
+            left: 40px;
+            padding: 15px;
+            box-sizing: border-box;
+            border: 1px solid #bba;
+            transform: rotate(-2deg);
+            display: flex;
+            flex-direction: column;
+            font-size: 0.95rem;
+            z-index: 1;
+        }
+
+        #permit.target-active {
+            box-shadow: 0 0 15px 5px rgba(255, 255, 200, 0.8);
+            border-color: #fff;
+        }
+
+        #permit h3 {
+            text-align: center;
+            border-bottom: 2px solid #800;
+            margin: 0 0 10px 0;
+            font-family: 'East Sea Dokdo', cursive;
+            font-size: 1.8rem;
+        }
+
+        .permit-row {
+            margin: 8px 0;
+            border-bottom: 1px dashed #aaa;
+            padding-bottom: 2px;
+        }
+
+        .permit-label {
+            font-size: 0.75rem;
+            color: #666;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .permit-value {
+            font-weight: bold;
+            color: #111;
+        }
+
+        .book-icon {
+            width: 110px;
+            height: 150px;
+            border-radius: 5px 10px 10px 5px;
+            box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            cursor: pointer !important;
+            font-family: 'East Sea Dokdo', cursive;
+            font-size: 1.6rem;
+            color: #e0e0e0;
+            border-left: 8px solid rgba(0, 0, 0, 0.3);
+            z-index: 2;
+        }
+
+        #guest-book-icon {
+            background: #2c3e50;
+            top: 30px;
+            left: 280px;
+            transform: rotate(5deg);
+        }
+
+        #rulebook-icon {
+            background: #8e44ad;
+            top: 30px;
+            left: 420px;
+            transform: rotate(-3deg);
+        }
+
+        #mirror {
+            width: 150px;
+            height: 200px;
+            background: #444;
+            border: 6px solid #853;
+            border-radius: 50% 50% 0 0;
+            top: 20px;
+            right: 30px;
+            overflow: hidden;
+            position: absolute;
+            z-index: 2;
+        }
+
+        #mirror-canvas {
+            width: 100%;
+            height: 100%;
+            background: #222;
+            opacity: 0.9;
+        }
+
+        /* Talisman (부적) */
+        #talisman {
+            width: 60px;
+            height: 140px;
+            background: #f1c40f;
+            border: 1px solid #d35400;
+            position: absolute;
+            bottom: 30px;
+            left: 300px;
+            z-index: 4;
+            display: none;
+            /* Day 6부터 */
+            font-family: 'East Sea Dokdo', cursive;
+            color: #c0392b;
+            font-size: 2rem;
+            text-align: center;
+            line-height: 1;
+            padding-top: 10px;
+            box-sizing: border-box;
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+        }
+
+        #talisman::after {
+            content: "惡靈退散";
+        }
+
+        .stamp-tool {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: white;
+            font-size: 1.8rem;
+            bottom: 20px;
+            font-family: 'East Sea Dokdo', cursive;
+            z-index: 5;
+        }
+
+        #stamp-approve {
+            background: #2b8a3e;
+            border: 4px solid #1e6b2c;
+            left: 38%;
+        }
+
+        #stamp-deny {
+            background: #c92a2a;
+            border: 4px solid #911d1d;
+            left: 52%;
+        }
+
+        /* Popups */
+        #book-modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 200;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .open-book {
+            width: 600px;
+            height: 500px;
+            background: #fdf5e6;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+            border: 10px solid #5d4037;
+            position: relative;
+            display: flex;
+            padding: 20px;
+        }
+
+        .page {
+            flex: 1;
+            padding: 10px 20px;
+            overflow-y: auto;
+            font-family: 'Noto Serif KR', serif;
+        }
+
+        .page h2 {
+            font-family: 'East Sea Dokdo', cursive;
+            font-size: 2.5rem;
+            text-align: center;
+            border-bottom: 2px solid #333;
+            margin: 0;
+        }
+
+        .page ul {
+            padding-left: 20px;
+            line-height: 1.8;
+            font-size: 1.1rem;
+        }
+
+        .close-bookmark {
+            position: absolute;
+            top: -15px;
+            right: 30px;
+            width: 40px;
+            height: 60px;
+            background: #c0392b;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            line-height: 50px;
+            cursor: pointer;
+            clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+        }
+
+        /* UI */
+        #ui-layer {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            color: white;
+            text-align: right;
+            z-index: 100;
+            font-family: 'East Sea Dokdo', cursive;
+            font-size: 1.8rem;
+            pointer-events: none;
+        }
+
+        #day-info {
+            position: absolute;
+            top: 10px;
+            left: 15px;
+            color: #fff;
+            font-family: 'East Sea Dokdo', cursive;
+            font-size: 1.5rem;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+
+        .overlay-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+        }
+
+        .overlay-screen h1 {
+            font-family: 'East Sea Dokdo', cursive;
+            font-size: 4rem;
+            margin: 0;
+            color: #c92a2a;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+            border: 1px solid #444;
+            width: 60%;
+            max-width: 500px;
+        }
+
+        .mistake-report-box {
+            margin-top: 15px;
+            text-align: left;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .mistake-item {
+            font-size: 0.95rem;
+            margin-bottom: 5px;
+            border-bottom: 1px dashed #444;
+            padding-bottom: 2px;
+            font-family: 'Noto Serif KR', serif;
+        }
+
+        .mistake-name {
+            font-weight: bold;
+            color: #f1c40f;
+        }
+
+        .mistake-reason {
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+
+        button {
+            background: #eee;
+            border: none;
+            padding: 10px 30px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            margin-top: 20px;
+            font-family: 'Noto Serif KR', serif;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #fff;
+            transform: scale(1.05);
+        }
+
+        /* Ending Style */
+        #win-screen h1 {
+            color: #f1c40f;
+            text-shadow: 0 0 20px #e67e22;
+        }
+
+        #win-screen p {
+            font-size: 1.5rem;
+            text-align: center;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="game-container">
+        <div id="day-info">제 1야</div>
+        <div id="ui-layer">
+            점수: <span id="score">0</span><br>
+            생명: <span id="lives">❤️❤️❤️</span>
+        </div>
+
+        <div id="view-area">
+            <div class="shoji-door" id="door-left">
+                <div class="bloodstain" id="blood-left"></div>
+            </div>
+            <div class="shoji-door" id="door-right">
+                <div class="bloodstain" id="blood-right"></div>
+            </div>
+            <canvas id="char-canvas" width="500" height="600"></canvas>
+            <div id="dialogue-box">"..."</div>
+        </div>
+
+        <div id="desk-area">
+            <div id="permit" class="draggable">
+                <h3>통행증</h3>
+                <div class="permit-row"><span class="permit-label">성명</span>
+                    <div class="permit-value" id="p-name"></div>
+                </div>
+                <div class="permit-row"><span class="permit-label">종족</span>
+                    <div class="permit-value" id="p-race"></div>
+                </div>
+                <div class="permit-row" style="border-bottom: 2px solid #800;"><span class="permit-label">유효기간</span>
+                    <div class="permit-value" id="p-date" style="color:#800"></div>
+                </div>
+                <div class="permit-row" style="border:none;"><span class="permit-label">목적</span>
+                    <div class="permit-value" id="p-purpose"></div>
+                </div>
+            </div>
+
+            <div id="guest-book-icon" class="draggable book-icon" onclick="openBook('guest')">숙박부</div>
+            <div id="rulebook-icon" class="draggable book-icon" onclick="openBook('rule')">지침서</div>
+
+            <div id="mirror" class="draggable"><canvas id="mirror-canvas" width="150" height="200"></canvas></div>
+            <div id="talisman" class="draggable"></div>
+
+            <div id="stamp-approve" class="draggable stamp-tool" data-type="approve">입실</div>
+            <div id="stamp-deny" class="draggable stamp-tool" data-type="deny">퇴거</div>
+        </div>
+
+        <div id="book-modal">
+            <div class="open-book">
+                <div class="close-bookmark" onclick="closeBook()">X</div>
+                <div class="page" id="modal-left-page"></div>
+                <div class="page" id="modal-right-page"></div>
+            </div>
+        </div>
+
+        <div id="day-clear-screen" class="overlay-screen hidden">
+            <h2>새벽이 밝았습니다</h2>
+            <div class="stat-box">
+                <p>처리한 손님: <span id="clear-guests">10</span>명</p>
+                <p>현재 점수: <span id="clear-score">0</span></p>
+                <div class="mistake-report-box">
+                    <h4>금일의 사건 일지</h4>
+                    <div id="mistake-list-content"></div>
+                </div>
+            </div>
+            <button onclick="nextDay()">다음 밤 맞이하기</button>
+        </div>
+
+        <div id="game-over" class="overlay-screen hidden">
+            <h1>백귀야행</h1>
+            <p style="font-size: 1.5rem;">요괴들이 여관을 점령했습니다.</p>
+            <div class="stat-box">
+                <div class="mistake-report-box">
+                    <h4>실패 원인 분석</h4>
+                    <div id="game-over-mistakes"></div>
+                </div>
+            </div>
+            <button onclick="location.reload()">다시 시작</button>
+        </div>
+
+        <div id="win-screen" class="overlay-screen hidden">
+            <h1>축제 종료</h1>
+            <p>
+                7일간의 백귀야행 축제가 끝났습니다.<br>
+                당신의 훌륭한 감시 덕분에 여관은 평화를 지켰습니다.<br>
+                마을 사람들은 당신을 영원히 기억할 것입니다.
+            </p>
+            <p style="color:#f1c40f; font-weight:bold; margin-top:30px;">최종 점수: <span id="final-score"></span></p>
+            <button onclick="location.reload()">다시 하기</button>
+        </div>
+    </div>
+
+    <script>
+        /** CONSTANTS & DATA */
+        const MAX_DAYS = 7;
+        const GUESTS_PER_DAY = 10;
+        const MAX_LIVES = 3;
+        const GAME_DATE = { year: 1805, month: 10, day: 15 };
+
+        const SUR_NAMES = ['다나카', '스즈키', '사토', '이토', '와타나베', '야마모토', '나카무라', '고바야시', '가토', '요시다', '야마다', '사사키', '야마구치', '마츠모토', '이노우에', '기무라', '하야시', '시미즈'];
+        const MALE_NAMES = ['이치로', '켄지', '타케시', '히로시', '다이스케', '렌', '준', '쇼타', '카즈오'];
+        const FEMALE_NAMES = ['사쿠라', '하나', '유키', '아이', '미사키', '린', '메이', '나나', '아오이'];
+
+        let state = {
+            day: 1,
+            score: 0,
+            lives: MAX_LIVES,
+            guestsProcessed: 0,
+            currentGuest: null,
+            processing: false,
+            zIndexCounter: 100,
+            todaySurnames: [],
+            mistakeLog: [],
+            talismanActive: false // Talisman status
+        };
+
+        const els = {
+            desk: document.getElementById('desk-area'),
+            doorLeft: document.getElementById('door-left'),
+            doorRight: document.getElementById('door-right'),
+            permit: document.getElementById('permit'),
+            guestBookIcon: document.getElementById('guest-book-icon'),
+            talisman: document.getElementById('talisman'),
+            bloodLeft: document.getElementById('blood-left'),
+            bloodRight: document.getElementById('blood-right'),
+            charCanvas: document.getElementById('char-canvas'),
+            mirrorCanvas: document.getElementById('mirror-canvas'),
+            dialogue: document.getElementById('dialogue-box'),
+            score: document.getElementById('score'),
+            lives: document.getElementById('lives'),
+            dayInfo: document.getElementById('day-info'),
+            bookModal: document.getElementById('book-modal'),
+            modalLeft: document.getElementById('modal-left-page'),
+            modalRight: document.getElementById('modal-right-page'),
+            dayClear: document.getElementById('day-clear-screen'),
+            mistakeListContent: document.getElementById('mistake-list-content'),
+            gameOver: document.getElementById('game-over'),
+            gameOverMistakes: document.getElementById('game-over-mistakes'),
+            winScreen: document.getElementById('win-screen'),
+            finalScore: document.getElementById('final-score')
+        };
+
+        const ctx = els.charCanvas.getContext('2d');
+        const mCtx = els.mirrorCanvas.getContext('2d');
+
+        /** UTILS */
+        function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+        function randomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+        function shuffle(arr) { return arr.sort(() => Math.random() - 0.5); }
+        function getAdjustedDate(days, isWeird) {
+            if (isWeird) return `${GAME_DATE.year}.${randomInt(13, 99)}.${randomInt(32, 99)}`;
+            const d = new Date(GAME_DATE.year, GAME_DATE.month - 1, GAME_DATE.day);
+            d.setDate(d.getDate() + days);
+            return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
+        }
+        function getFlawDescription(flaw) {
+            if (!flaw) return "알 수 없는 요기";
+            const dict = {
+                'mirror': "거울에 모습 없음/해골", 'horns': "뿔 숨김 (인간 아님)", 'eyes': "붉은 눈 (요괴)",
+                'not_reserved': "예약자 명단 없음", 'race_typo': "종족 표기 오류",
+                'expired_real': "기간 만료", 'expired_weird': "비현실적 날짜",
+                'bloodstain': "문에 핏자국 발견"
+            };
+            return dict[flaw] || flaw;
+        }
+
+        /** GAME LOGIC */
+        function startDay() {
+            state.guestsProcessed = 0;
+            state.mistakeLog = [];
+            els.dayClear.classList.add('hidden');
+            els.dayInfo.innerText = `제 ${state.day}야 (Day ${state.day})`;
+
+            // Setup Props per Day
+            state.todaySurnames = shuffle([...SUR_NAMES]).slice(0, 10).sort();
+            els.guestBookIcon.style.display = state.day >= 2 ? 'flex' : 'none';
+            els.talisman.style.display = state.day >= 6 ? 'block' : 'none';
+
+            spawnGuest();
+        }
+
+        function nextDay() {
+            state.day++;
+            if (state.day > MAX_DAYS) {
+                els.dayClear.classList.add('hidden');
+                els.winScreen.classList.remove('hidden');
+                els.finalScore.innerText = state.score;
+                return;
+            }
+            GAME_DATE.day++;
+            if (GAME_DATE.day > 30) { GAME_DATE.day = 1; GAME_DATE.month++; }
+            startDay();
+        }
+
+        class Guest {
+            constructor(day) {
+                // 1. Define Identity
+                // Day 4: Chance for Bloodstain (Auto Yokai)
+                this.hasBloodstain = (day >= 4 && Math.random() < 0.15);
+
+                if (this.hasBloodstain) {
+                    this.isYokai = true;
+                    this.flaw = 'bloodstain';
+                    this.isCostume = false;
+                } else {
+                    // Normal Generation
+                    let yokaiChance = 0.3 + (day * 0.08);
+                    this.isYokai = Math.random() < yokaiChance;
+                    this.flaw = null;
+                    this.isCostume = false;
+
+                    if (this.isYokai) {
+                        // --- YOKAI FLAWS ---
+                        let pool = ['mirror', 'horns', 'eyes'];
+                        if (day >= 2) pool.push('not_reserved');
+                        if (day >= 3) { pool.push('race_typo'); pool.push('expired_weird'); }
+
+                        this.flaw = randomItem(pool);
+                        if (!this.flaw) this.flaw = 'mirror'; // Safety
+                    } else {
+                        // --- HUMAN QUIRKS ---
+                        // Day 5+: Costume (Human looking like Yokai)
+                        if (day >= 5 && Math.random() < 0.2) {
+                            this.isCostume = true;
+                            // Visuals handled in draw. No 'flaw' logic because they are valid.
+                        }
+                        // Normal Human Mistakes
+                        else if (Math.random() < 0.15) {
+                            let mistakes = ['expired_real'];
+                            if (day >= 2) mistakes.push('not_reserved');
+                            this.flaw = randomItem(mistakes);
+                        }
+                    }
+                }
+
+                // 2. Name
+                let surname;
+                if (this.flaw === 'not_reserved') {
+                    const banned = SUR_NAMES.filter(n => !state.todaySurnames.includes(n));
+                    surname = randomItem(banned) || "무명";
+                } else {
+                    surname = (day === 1) ? randomItem(SUR_NAMES) : randomItem(state.todaySurnames);
+                }
+                this.name = `${surname} ${this.gender === 'male' ? randomItem(MALE_NAMES) : randomItem(FEMALE_NAMES)}`;
+                this.gender = Math.random() < 0.5 ? 'male' : 'female';
+
+                // 3. Permit Info
+                this.raceText = (this.flaw === 'race_typo') ? "인간? (Human)" : "인간 (Human)";
+
+                if (this.flaw === 'expired_weird') this.validDate = getAdjustedDate(0, true);
+                else if (this.flaw === 'expired_real') this.validDate = getAdjustedDate(-randomInt(1, 10));
+                else this.validDate = getAdjustedDate(randomInt(1, 30));
+
+                this.purpose = randomItem(['상업', '여행', '방문', '요양', '순례']);
+
+                // 4. Visual Settings
+                this.appearance = {
+                    skin: '#f0d5be', eyes: '#000', hair: '#111',
+                    horns: (this.flaw === 'horns' || this.isCostume), // Costume has horns
+                    redEyes: (this.flaw === 'eyes' || this.isCostume)  // Costume has red eyes
+                };
+            }
+
+            draw(ctx, isMirror) {
+                const w = ctx.canvas.width, h = ctx.canvas.height;
+                ctx.clearRect(0, 0, w, h);
+
+                // Talisman Effect (Glow) - Only on Main View
+                if (!isMirror && state.talismanActive && this.isYokai) {
+                    ctx.save();
+                    ctx.shadowColor = "#f1c40f"; ctx.shadowBlur = 40;
+                    this.drawFace(ctx, w / 2, h * 0.6, 1.05, false); // Draw slightly larger for aura
+                    ctx.restore();
+                }
+
+                // Mirror Logic
+                if (isMirror) {
+                    if (this.isYokai && this.flaw === 'mirror') {
+                        if (Math.random() < 0.5) return; // Invisible
+                        else { this.drawFace(ctx, w / 2, h / 2 + 40, 0.5, true); return; } // Skull
+                    }
+                    // COSTUME LOGIC: If costume, Mirror shows NORMAL human (no horns/red eyes)
+                    if (this.isCostume) {
+                        this.drawFace(ctx, w / 2, h / 2 + 50, 0.5, false, true); // forceNormal = true
+                        return;
+                    }
+                }
+
+                // Main Draw
+                const scale = isMirror ? 0.5 : 1.0;
+                const cy = isMirror ? h / 2 + 50 : h * 0.6;
+                this.drawFace(ctx, w / 2, cy, scale, false);
+            }
+
+            drawFace(ctx, x, y, s, isSkull, forceNormal = false) {
+                ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+
+                // Body
+                ctx.fillStyle = this.gender === 'male' ? '#34495e' : '#9b59b6';
+                if (isSkull) ctx.fillStyle = '#000';
+                ctx.beginPath(); ctx.moveTo(0, -100); ctx.lineTo(-90, 250); ctx.lineTo(90, 250); ctx.fill();
+
+                // Head
+                ctx.fillStyle = isSkull ? '#ecf0f1' : this.appearance.skin;
+                ctx.beginPath(); ctx.arc(0, -140, 60, 0, Math.PI * 2); ctx.fill();
+
+                if (isSkull) {
+                    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(-20, -140, 15, 0, Math.PI * 2); ctx.arc(20, -140, 15, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.moveTo(-10, -110); ctx.lineTo(10, -110); ctx.stroke();
+                } else {
+                    // Eyes
+                    const hasRedEyes = !forceNormal && this.appearance.redEyes;
+                    ctx.fillStyle = hasRedEyes ? '#e74c3c' : '#000';
+                    if (hasRedEyes) { ctx.shadowColor = 'red'; ctx.shadowBlur = 15; }
+                    ctx.beginPath(); ctx.ellipse(-20, -145, 10, 7, 0, 0, Math.PI * 2); ctx.ellipse(20, -145, 10, 7, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.shadowBlur = 0;
+
+                    // Hair (High cut)
+                    ctx.fillStyle = this.appearance.hair;
+                    ctx.beginPath();
+                    if (this.gender === 'male') { ctx.arc(0, -165, 65, Math.PI, 0); ctx.rect(-65, -165, 130, 40); }
+                    else { ctx.arc(0, -160, 70, Math.PI, 0); ctx.rect(-70, -160, 140, 100); }
+                    ctx.fill();
+
+                    // Glow effect for red eyes over hair
+                    if (hasRedEyes) {
+                        ctx.save(); ctx.fillStyle = "rgba(255,0,0,0.6)"; ctx.shadowColor = "red"; ctx.shadowBlur = 25; ctx.globalCompositeOperation = 'screen';
+                        ctx.beginPath(); ctx.ellipse(-20, -145, 12, 9, 0, 0, Math.PI * 2); ctx.ellipse(20, -145, 12, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+                    }
+
+                    // Horns
+                    const hasHorns = !forceNormal && this.appearance.horns;
+                    if (hasHorns) {
+                        ctx.fillStyle = '#ddd';
+                        ctx.beginPath(); ctx.moveTo(-30, -180); ctx.lineTo(-45, -230); ctx.lineTo(-15, -190); ctx.fill();
+                        ctx.beginPath(); ctx.moveTo(30, -180); ctx.lineTo(45, -230); ctx.lineTo(15, -190); ctx.fill();
+                    }
+                }
+                ctx.restore();
+            }
+        }
+
+        function spawnGuest() {
+            if (state.processing) return;
+            if (state.guestsProcessed >= GUESTS_PER_DAY) {
+                endDay();
+                return;
+            }
+
+            state.processing = true;
+            // Close Door & Clear Blood
+            els.doorLeft.parentElement.classList.remove('door-open');
+            els.bloodLeft.style.display = 'none';
+            els.bloodRight.style.display = 'none';
+            els.dialogue.style.display = 'none';
+
+            setTimeout(() => {
+                state.currentGuest = new Guest(state.day);
+
+                // Bloodstain Logic (Before Door Open)
+                if (state.currentGuest.hasBloodstain) {
+                    const isLeft = Math.random() < 0.5;
+                    if (isLeft) els.bloodLeft.style.display = 'block';
+                    else els.bloodRight.style.display = 'block';
+                }
+
+                // UI Updates
+                document.getElementById('p-name').innerText = state.currentGuest.name;
+                document.getElementById('p-race').innerText = state.currentGuest.raceText;
+                const dateEl = document.getElementById('p-date');
+                dateEl.innerText = state.currentGuest.validDate;
+                dateEl.style.color = (state.currentGuest.flaw === 'expired_weird') ? '#c00' : '#333';
+                document.getElementById('p-purpose').innerText = state.currentGuest.purpose;
+
+                resetPositions();
+                renderLoop(); // Start drawing loop for dynamic effects
+
+                setTimeout(() => {
+                    els.doorLeft.parentElement.classList.add('door-open');
+                    setTimeout(() => {
+                        els.dialogue.style.display = 'block';
+                        let msg = "안녕하십니까.";
+                        if (state.currentGuest.flaw === 'not_reserved') msg = "예약... 했을 겁니다.";
+                        if (state.currentGuest.isYokai && Math.random() < 0.2) msg = "...들여보내줘.";
+                        if (state.currentGuest.isCostume) msg = "축제 분장입니다! 멋지죠?";
+                        els.dialogue.innerText = msg;
+                        state.processing = false;
+                    }, 600);
+                }, 1000);
+            }, 1200);
+        }
+
+        function makeDecision(type) {
+            if (state.processing) return;
+            state.processing = true;
+
+            const guest = state.currentGuest;
+            // Reject if: Is Yokai OR has human flaw
+            // Costume humans are NOT Yokai and have no flaw (flaw=null), so allow.
+            const shouldDeny = guest.isYokai || guest.flaw !== null;
+            const isCorrect = (type === 'approve' && !shouldDeny) || (type === 'deny' && shouldDeny);
+
+            let msg = "";
+            if (isCorrect) {
+                state.score += 100;
+                msg = "적절한 조치였습니다.";
+                els.dialogue.style.color = '#4f4';
+            } else {
+                state.lives--;
+                if (type === 'approve' && guest.isYokai) {
+                    msg = "요괴 침입 허용! (규정 위반)";
+                    state.mistakeLog.push({ name: guest.name, reason: getFlawDescription(guest.flaw) });
+                } else if (type === 'approve') {
+                    msg = "규정 위반자 입장 (감점)";
+                    state.mistakeLog.push({ name: guest.name, reason: getFlawDescription(guest.flaw) });
+                } else {
+                    msg = "무고한 손님을 내쫓았습니다.";
+                }
+                els.dialogue.style.color = '#f44';
+                document.body.style.backgroundColor = '#500';
+                setTimeout(() => document.body.style.backgroundColor = '#111', 300);
+            }
+
+            els.score.innerText = state.score;
+            els.lives.innerText = "❤️".repeat(state.lives);
+            els.dialogue.innerText = msg;
+
+            if (state.lives <= 0) setTimeout(endGame, 1000);
+            else setTimeout(() => {
+                els.dialogue.style.color = '#fff';
+                state.guestsProcessed++;
+                state.processing = false;
+                spawnGuest();
+            }, 1500);
+        }
+
+        // Drawing Loop for Dynamic Effects (Talisman)
+        function renderLoop() {
+            if (state.processing && !state.currentGuest) return;
+            if (state.currentGuest) {
+                state.currentGuest.draw(ctx, false);
+                state.currentGuest.draw(mCtx, true);
+            }
+            requestAnimationFrame(renderLoop);
+        }
+
+        function openBook(type) {
+            els.bookModal.style.display = 'flex';
+            els.modalLeft.innerHTML = ''; els.modalRight.innerHTML = '';
+            if (type === 'guest') {
+                els.modalLeft.innerHTML = `<h2>예약자 (성씨)</h2><ul>${state.todaySurnames.slice(0, 5).map(n => `<li>${n}</li>`).join('')}</ul>`;
+                els.modalRight.innerHTML = `<h2>&nbsp;</h2><ul>${state.todaySurnames.slice(5).map(n => `<li>${n}</li>`).join('')}</ul>`;
+            } else { // Rules
+                let r = [
+                    "유효기간 확인.", "거울에 비치지 않거나 해골은 요괴.", "뿔과 붉은 눈을 경계하라."
+                ];
+                if (state.day >= 2) r.push("예약 장부(성씨) 확인 필.");
+                if (state.day >= 3) r.push("서류 오타 및 기괴한 날짜 주의.");
+                if (state.day >= 4) r.push("문에 핏자국이 있으면 요괴.");
+                if (state.day >= 5) r.push("분장한 인간은 거울로 판별.");
+                if (state.day >= 6) r.push("부적으로 요괴의 기운 탐지.");
+
+                els.modalLeft.innerHTML = `<h2>지침서</h2><ul>${r.map(x => `<li>${x}</li>`).join('')}</ul>`;
+                els.modalRight.innerHTML = `<h2>팁</h2><ul><li>분장한 인간은 거울에 정상으로 비친다.</li><li>부적을 요괴에게 대면 빛이 난다.</li></ul>`;
+            }
+        }
+        function closeBook() { els.bookModal.style.display = 'none'; }
+
+        function endDay() {
+            els.dayClear.classList.remove('hidden');
+            document.getElementById('clear-score').innerText = state.score;
+            els.mistakeListContent.innerHTML = state.mistakeLog.length ?
+                state.mistakeLog.map(m => `<div class="mistake-item"><span class="mistake-name">${m.name}</span>: ${m.reason}</div>`).join('') :
+                "<div style='text-align:center; color:#2ecc71'>완벽 방어</div>";
+        }
+
+        function endGame() {
+            els.gameOver.classList.remove('hidden');
+            document.getElementById('end-reason').innerText = `Day ${state.day} 실패. 점수: ${state.score}`;
+
+            els.gameOverMistakes.innerHTML = '';
+            if (state.mistakeLog.length > 0) {
+                state.mistakeLog.forEach(log => {
+                    const div = document.createElement('div');
+                    div.className = 'mistake-item';
+                    div.innerHTML = `<span class="mistake-name">${log.name}</span>: <span class="mistake-reason">${log.reason}</span>`;
+                    els.gameOverMistakes.appendChild(div);
+                });
+            } else {
+                els.gameOverMistakes.innerHTML = '<div class="mistake-item" style="color:#aaa; text-align:center;">무고한 손님들을 내쫓아 평판이 바닥났습니다.</div>';
+            }
+        }
+
+        function resetPositions() {
+            els.permit.style.top = '20px'; els.permit.style.left = '40px'; els.permit.style.transform = 'rotate(-2deg)';
+            const stamps = document.querySelectorAll('.stamp-tool');
+            stamps.forEach(s => { s.style.bottom = '20px'; });
+            els.talisman.style.top = ''; els.talisman.style.left = '300px'; els.talisman.style.bottom = '30px';
+        }
+
+        /** DRAG & DROP */
+        let draggedItem = null, offsetX = 0, offsetY = 0;
+        document.querySelectorAll('.draggable').forEach(el => {
+            el.addEventListener('mousedown', startDrag); el.addEventListener('touchstart', startDrag, { passive: false });
+        });
+
+        function startDrag(e) {
+            if (state.processing && !e.target.classList.contains('stamp-tool')) return;
+            if (e.target.classList.contains('book-icon')) return;
+
+            const ev = e.touches ? e.touches[0] : e;
+            draggedItem = e.currentTarget;
+            state.zIndexCounter++; draggedItem.style.zIndex = state.zIndexCounter;
+            const rect = draggedItem.getBoundingClientRect();
+            offsetX = ev.clientX - rect.left; offsetY = ev.clientY - rect.top;
+
+            // Talisman Activate
+            if (draggedItem.id === 'talisman') state.talismanActive = true;
+
+            document.addEventListener('mousemove', onDrag); document.addEventListener('mouseup', stopDrag);
+            document.addEventListener('touchmove', onDrag, { passive: false }); document.addEventListener('touchend', stopDrag);
+        }
+
+        function onDrag(e) {
+            if (!draggedItem) return;
+            e.preventDefault();
+            const ev = e.touches ? e.touches[0] : e;
+            const deskRect = els.desk.getBoundingClientRect();
+            let l = ev.clientX - deskRect.left - offsetX;
+            let t = ev.clientY - deskRect.top - offsetY;
+            // Bounds
+            l = Math.max(-50, Math.min(l, deskRect.width - 50));
+            t = Math.max(-50, Math.min(t, deskRect.height - 50));
+
+            draggedItem.style.left = l + 'px'; draggedItem.style.top = t + 'px';
+            draggedItem.style.bottom = 'auto'; draggedItem.style.right = 'auto';
+
+            if (draggedItem.classList.contains('stamp-tool')) checkHover(draggedItem, els.permit);
+        }
+
+        function checkHover(obj, target) {
+            const r1 = obj.getBoundingClientRect(); const r2 = target.getBoundingClientRect();
+            const overlap = !(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom);
+            if (target.id === 'permit') {
+                if (overlap) target.classList.add('target-active'); else target.classList.remove('target-active');
+            }
+            return overlap;
+        }
+
+        function stopDrag(e) {
+            if (!draggedItem) return;
+            draggedItem.style.transform = draggedItem.id === 'permit' ? 'rotate(-2deg)' : 'none';
+
+            if (draggedItem.classList.contains('stamp-tool')) {
+                if (checkHover(draggedItem, els.permit)) {
+                    makeDecision(draggedItem.dataset.type);
+                    setTimeout(resetPositions, 100);
+                }
+            }
+
+            if (draggedItem.id === 'talisman') state.talismanActive = false;
+
+            els.permit.classList.remove('target-active');
+            draggedItem = null;
+            document.removeEventListener('mousemove', onDrag); document.removeEventListener('mouseup', stopDrag);
+            document.removeEventListener('touchmove', onDrag); document.removeEventListener('touchend', stopDrag);
+        }
+
+        startDay();
+    </script>
+</body>
+
+</html>
