@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Doodle Battle Shooter: Power Up!</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #333;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            color: #fff;
+        }
+
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+        }
+
+        canvas {
+            display: block;
+            background-color: #fff;
+            border-radius: 4px;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .divider {
+            position: absolute;
+            left: 50%;
+            top: 2%;
+            bottom: 2%;
+            width: 4px;
+            background: #333;
+            border-radius: 2px;
+            transform: translateX(-50%);
+            opacity: 0.8;
+            z-index: 10;
+        }
+
+        .screen {
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            color: white;
+            pointer-events: auto;
+            border: 2px solid white;
+            z-index: 20;
+        }
+
+        h1 {
+            margin: 0 0 20px 0;
+            font-size: 40px;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+        }
+
+        h3 {
+            margin: 10px 0;
+            color: #ffd700;
+        }
+
+        p {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #ddd;
+        }
+
+        .controls {
+            display: flex;
+            gap: 50px;
+            justify-content: center;
+            margin: 30px 0;
+        }
+
+        .control-box {
+            border: 1px dashed #fff;
+            padding: 20px;
+            border-radius: 10px;
+            min-width: 150px;
+        }
+
+        .key {
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        button {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+            padding: 15px 40px;
+            font-size: 24px;
+            cursor: pointer;
+            font-family: inherit;
+            margin-top: 20px;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            background: white;
+            color: black;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #winnerText {
+            font-size: 60px;
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 20px;
+            text-shadow: 4px 4px 0 #d00;
+            transform: rotate(-3deg);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="game-container">
+        <canvas id="gameCanvas" width="1000" height="700"></canvas>
+
+        <!-- 중앙 나선 스프링 -->
+        <div class="divider"></div>
+
+        <div id="ui-layer">
+            <div id="startScreen" class="screen">
+                <h1>Notebook Battle</h1>
+                <div class="controls">
+                    <div class="control-box">
+                        <h3>PLAYER 1 (Left)</h3>
+                        <p>Move: <span class="key">W A S D</span></p>
+                    </div>
+                    <div class="control-box">
+                        <h3>PLAYER 2 (Right)</h3>
+                        <p>Move: <span class="key">Arrows</span></p>
+                    </div>
+                </div>
+                <p>
+                    ☠️ 5,000점마다 보스 등장!<br>
+                    ⚡ <strong>파워업 아이템</strong> 추가됨 (확산탄 발사)
+                </p>
+                <button onclick="Game.start()">BATTLE START</button>
+            </div>
+
+            <div id="gameOverScreen" class="screen hidden">
+                <div id="winnerText">PLAYER 1 WINS!</div>
+                <button onclick="Game.start()">REMATCH</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 유틸리티 및 드로잉 함수 ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const rand = (min, max) => Math.random() * (max - min) + min;
+
+        function drawWobblyLine(ctx, x1, y1, x2, y2, color, width = 2) {
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.lineCap = 'round';
+            const midX = (x1 + x2) / 2 + (Math.random() - 0.5) * 4;
+            const midY = (y1 + y2) / 2 + (Math.random() - 0.5) * 4;
+            ctx.moveTo(x1, y1);
+            ctx.quadraticCurveTo(midX, midY, x2, y2);
+            ctx.stroke();
+        }
+
+        function drawScribbleCircle(ctx, x, y, radius, color, fill = false) {
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(
+                x + (Math.random() - 0.5) * 2,
+                y + (Math.random() - 0.5) * 2,
+                radius,
+                radius * (0.9 + Math.random() * 0.2),
+                Math.random() * Math.PI,
+                0, Math.PI * 2
+            );
+            if (fill) ctx.fill();
+            else ctx.stroke();
+        }
+
+        // --- 게임 엔티티 클래스 ---
+
+        class Player {
+            constructor(isPlayer2) {
+                this.width = 500;
+                this.height = 700;
+                this.x = this.width / 2;
+                this.y = this.height - 100;
+                this.radius = 15;
+                this.speed = 6;
+                this.color = isPlayer2 ? '#222' : '#00f';
+                this.isPlayer2 = isPlayer2;
+                this.maxHp = 5;
+                this.hp = 5;
+                this.invincible = 0;
+
+                // 파워업 관련
+                this.powerUpTimer = 0; // 프레임 단위
+            }
+
+            update(input) {
+                if (this.invincible > 0) this.invincible--;
+                if (this.powerUpTimer > 0) this.powerUpTimer--;
+
+                let up, down, left, right;
+                if (this.isPlayer2) {
+                    up = input.ArrowUp; down = input.ArrowDown;
+                    left = input.ArrowLeft; right = input.ArrowRight;
+                } else {
+                    up = input.KeyW; down = input.KeyS;
+                    left = input.KeyA; right = input.KeyD;
+                }
+                if (up && this.y > this.radius) this.y -= this.speed;
+                if (down && this.y < this.height - this.radius) this.y += this.speed;
+                if (left && this.x > this.radius) this.x -= this.speed;
+                if (right && this.x < this.width - this.radius) this.x += this.speed;
+            }
+
+            draw(ctx) {
+                if (this.invincible > 0 && Math.floor(Date.now() / 50) % 2 === 0) return;
+
+                const jit = () => (Math.random() - 0.5) * 2;
+
+                // 파워업 상태일 때 오라 표시
+                if (this.powerUpTimer > 0) {
+                    drawScribbleCircle(ctx, this.x, this.y, 25, 'rgba(255, 200, 0, 0.3)', true);
+                }
+
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y - 20 + jit());
+                ctx.lineTo(this.x - 15 + jit(), this.y + 15 + jit());
+                ctx.lineTo(this.x, this.y + 10 + jit());
+                ctx.lineTo(this.x + 15 + jit(), this.y + 15 + jit());
+                ctx.closePath();
+                ctx.stroke();
+            }
+        }
+
+        class Bullet {
+            constructor(x, y, vx, vy, isEnemy = false) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx || 0;
+                this.vy = vy || (isEnemy ? 4 : -10);
+                this.radius = isEnemy ? 4 : 3;
+                this.isEnemy = isEnemy;
+                this.dead = false;
+                this.color = isEnemy ? '#d00' : '#333';
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+            }
+            draw(ctx) {
+                drawScribbleCircle(ctx, this.x, this.y, this.radius, this.color, true);
+            }
+        }
+
+        class Enemy {
+            constructor(x, y, isRush = false) {
+                this.x = x;
+                this.y = y;
+                this.radius = 18;
+                this.speed = rand(1.5, 3);
+                if (isRush) this.speed += 2;
+                this.hp = isRush ? 1 : 2;
+                this.color = isRush ? '#a00' : '#d00';
+                this.isRush = isRush;
+                this.dead = false;
+            }
+            update(height) {
+                this.y += this.speed;
+                this.x += Math.sin(this.y * 0.05) * 1.5;
+                if (this.y > height + 50) this.dead = true;
+            }
+            draw(ctx) {
+                drawScribbleCircle(ctx, this.x, this.y, this.radius, this.color);
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 2;
+                if (this.isRush) {
+                    drawWobblyLine(ctx, this.x - 10, this.y - 8, this.x - 2, this.y, this.color);
+                    drawWobblyLine(ctx, this.x + 2, this.y, this.x + 10, this.y - 8, this.color);
+                } else {
+                    drawWobblyLine(ctx, this.x - 8, this.y - 5, this.x - 4, this.y - 5, this.color);
+                    drawWobblyLine(ctx, this.x + 4, this.y - 5, this.x + 8, this.y - 5, this.color);
+                }
+            }
+        }
+
+        class Boss {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.targetY = 120;
+                this.radius = 45;
+                this.maxHp = 80;
+                this.hp = this.maxHp;
+                this.color = '#000';
+                this.angle = 0;
+                this.state = 'entering'; // entering, fight
+                this.dead = false;
+                this.frame = 0;
+            }
+
+            update(width) {
+                this.frame++;
+                if (this.state === 'entering') {
+                    this.y += 2;
+                    if (this.y >= this.targetY) this.state = 'fight';
+                } else {
+                    this.angle += 0.03;
+                    this.x = width / 2 + Math.sin(this.angle) * 150;
+                }
+            }
+
+            draw(ctx) {
+                drawScribbleCircle(ctx, this.x, this.y, this.radius, this.color);
+                drawScribbleCircle(ctx, this.x, this.y, this.radius - 5, this.color);
+                drawScribbleCircle(ctx, this.x - 20, this.y - 10, 8, this.color, true);
+                drawScribbleCircle(ctx, this.x + 20, this.y - 10, 8, this.color, true);
+
+                ctx.beginPath();
+                ctx.moveTo(this.x - 20, this.y + 20);
+                ctx.quadraticCurveTo(this.x, this.y + 35, this.x + 20, this.y + 20);
+                ctx.stroke();
+
+                const barW = 100;
+                const pct = this.hp / this.maxHp;
+                ctx.fillStyle = '#d00';
+                ctx.fillRect(this.x - barW / 2, this.y - 60, barW * pct, 8);
+                ctx.strokeRect(this.x - barW / 2, this.y - 60, barW, 8);
+            }
+        }
+
+        class Item {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type; // 'hp' or 'power'
+                this.radius = 12;
+                this.speed = 2;
+                this.dead = false;
+            }
+            update(height) {
+                this.y += this.speed;
+                if (this.y > height + 20) this.dead = true;
+            }
+            draw(ctx) {
+                if (this.type === 'hp') {
+                    const c = '#0a0'; // 초록색 (회복)
+                    ctx.strokeStyle = c;
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(this.x - 10, this.y - 10, 20, 20);
+                    drawWobblyLine(ctx, this.x, this.y - 6, this.x, this.y + 6, c);
+                    drawWobblyLine(ctx, this.x - 6, this.y, this.x + 6, this.y, c);
+                } else {
+                    const c = '#fc0'; // 노란색 (파워업)
+                    ctx.strokeStyle = c;
+                    ctx.lineWidth = 3;
+                    // 삐죽한 원
+                    drawScribbleCircle(ctx, this.x, this.y, 12, c);
+                    // 번개 모양
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + 2, this.y - 8);
+                    ctx.lineTo(this.x - 4, this.y + 2);
+                    ctx.lineTo(this.x + 4, this.y + 2);
+                    ctx.lineTo(this.x - 2, this.y + 8);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = rand(-3, 3);
+                this.vy = rand(-3, 3);
+                this.alpha = 1;
+                this.color = color;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= 0.05;
+            }
+            draw(ctx) {
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, 4, 4);
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        // --- 게임 인스턴스 (각 플레이어 화면 관리) ---
+
+        class GameInstance {
+            constructor(isPlayer2) {
+                this.isPlayer2 = isPlayer2;
+                this.opponent = null;
+                this.width = 500;
+                this.height = 700;
+
+                this.player = new Player(isPlayer2);
+                this.bullets = [];
+                this.enemies = [];
+                this.items = [];
+                this.particles = [];
+                this.boss = null;
+
+                this.score = 0;
+                this.killCount = 0;
+                this.nextBossScore = 5000;
+
+                this.rushMessage = "";
+                this.rushTimer = 0;
+                this.frame = 0;
+                this.gameOver = false;
+            }
+
+            setOpponent(opp) { this.opponent = opp; }
+
+            spawnEnemy(isRush = false) {
+                const x = rand(30, this.width - 30);
+                this.enemies.push(new Enemy(x, -30, isRush));
+            }
+
+            // 아이템 드랍 로직 (확률 조정됨)
+            tryDropItem(x, y) {
+                // 5% 확률로 아이템 드랍 (매우 낮음)
+                if (Math.random() < 0.05) {
+                    // HP : Power = 50 : 50
+                    const type = Math.random() < 0.5 ? 'hp' : 'power';
+                    this.items.push(new Item(x, y, type));
+                }
+            }
+
+            triggerRush(amount, message) {
+                if (this.opponent.gameOver) return;
+                this.opponent.rushMessage = message || "RUSH!!";
+                this.opponent.rushTimer = 60;
+                for (let i = 0; i < amount; i++) {
+                    setTimeout(() => {
+                        if (!this.opponent.gameOver) this.opponent.spawnEnemy(true);
+                    }, i * 150);
+                }
+            }
+
+            createExplosion(x, y, color) {
+                for (let i = 0; i < 8; i++) this.particles.push(new Particle(x, y, color));
+            }
+
+            update(input) {
+                if (this.gameOver) return;
+                this.frame++;
+
+                // 보스 스폰 체크
+                if (!this.boss && this.score >= this.nextBossScore) {
+                    this.boss = new Boss(this.width / 2, -100);
+                    this.nextBossScore += 5000;
+                    this.rushMessage = "BOSS!!";
+                    this.rushTimer = 100;
+                    this.enemies.forEach(e => this.createExplosion(e.x, e.y, e.color));
+                    this.enemies = [];
+                }
+
+                // 플레이어 업데이트
+                this.player.update(input);
+
+                // 총알 발사 (파워업 체크)
+                if (this.frame % 10 === 0) {
+                    if (this.player.powerUpTimer > 0) {
+                        // 파워업: 3발 확산탄
+                        this.bullets.push(new Bullet(this.player.x, this.player.y - 20, 0, -10));
+                        this.bullets.push(new Bullet(this.player.x, this.player.y - 20, -2, -9));
+                        this.bullets.push(new Bullet(this.player.x, this.player.y - 20, 2, -9));
+                    } else {
+                        // 기본: 1발
+                        this.bullets.push(new Bullet(this.player.x, this.player.y - 20));
+                    }
+                }
+
+                // 잡졸 스폰
+                if (!this.boss && this.frame % 60 === 0) {
+                    this.spawnEnemy();
+                }
+
+                // 보스 업데이트
+                if (this.boss) {
+                    this.boss.update(this.width);
+
+                    if (this.boss.state === 'fight') {
+                        if (this.boss.frame % 60 === 0) {
+                            for (let i = -2; i <= 2; i++) {
+                                this.bullets.push(new Bullet(this.boss.x, this.boss.y + 30, i * 2, 4, true));
+                            }
+                        }
+                        if (this.boss.frame % 100 === 0) {
+                            const angle = Math.atan2(this.player.y - this.boss.y, this.player.x - this.boss.x);
+                            this.bullets.push(new Bullet(this.boss.x, this.boss.y + 30, Math.cos(angle) * 5, Math.sin(angle) * 5, true));
+                        }
+                    }
+
+                    // 플레이어 총알 -> 보스 충돌
+                    this.bullets.forEach((b, idx) => {
+                        if (!b.dead && !b.isEnemy) {
+                            const dist = Math.hypot(b.x - this.boss.x, b.y - this.boss.y);
+                            if (dist < this.boss.radius + b.radius) {
+                                b.dead = true;
+                                this.boss.hp--;
+                                this.createExplosion(b.x, b.y, '#000');
+                                if (this.boss.hp <= 0) {
+                                    this.boss.dead = true;
+                                    this.createExplosion(this.boss.x, this.boss.y, '#000');
+                                    this.score += 2000;
+                                    this.triggerRush(10, "SUPER RUSH!!");
+                                    this.items.push(new Item(this.boss.x, this.boss.y, 'power')); // 보스 잡으면 확정 파워업
+                                    this.boss = null;
+                                }
+                            }
+                        }
+                    });
+
+                    // 플레이어 -> 보스 몸박
+                    if (this.boss && this.player.invincible === 0) {
+                        const dist = Math.hypot(this.player.x - this.boss.x, this.player.y - this.boss.y);
+                        if (dist < this.boss.radius + this.player.radius) {
+                            this.player.hp--;
+                            this.player.invincible = 60;
+                            if (this.player.hp <= 0) this.gameOver = true;
+                        }
+                    }
+                }
+
+                // 객체 업데이트 및 충돌 처리
+                this.bullets.forEach(b => b.update());
+                this.items.forEach(i => i.update(this.height));
+                this.particles.forEach(p => p.update());
+
+                // 잡졸 처리
+                this.enemies.forEach(e => {
+                    e.update(this.height);
+                    // 플레이어 피격
+                    if (!e.dead && this.player.invincible === 0) {
+                        const dist = Math.hypot(e.x - this.player.x, e.y - this.player.y);
+                        if (dist < e.radius + this.player.radius) {
+                            this.player.hp--;
+                            this.player.invincible = 60;
+                            e.dead = true;
+                            this.createExplosion(e.x, e.y, '#d00');
+                            if (this.player.hp <= 0) this.gameOver = true;
+                        }
+                    }
+                    // 적 피격
+                    this.bullets.forEach(b => {
+                        if (!b.dead && !b.isEnemy && !e.dead) {
+                            const dist = Math.hypot(b.x - e.x, b.y - e.y);
+                            if (dist < e.radius + b.radius) {
+                                b.dead = true;
+                                e.hp--;
+                                if (e.hp <= 0) {
+                                    e.dead = true;
+                                    this.score += 100;
+                                    this.killCount++;
+                                    this.createExplosion(e.x, e.y, '#d00');
+                                    this.tryDropItem(e.x, e.y); // 아이템 드롭 시도
+                                    if (this.killCount % 5 === 0) this.triggerRush(3);
+                                }
+                            }
+                        }
+                    });
+                });
+
+                // 플레이어 -> 적 총알 맞음
+                this.bullets.forEach(b => {
+                    if (b.isEnemy && !b.dead && this.player.invincible === 0) {
+                        const dist = Math.hypot(b.x - this.player.x, b.y - this.player.y);
+                        if (dist < b.radius + this.player.radius) {
+                            b.dead = true;
+                            this.player.hp--;
+                            this.player.invincible = 60;
+                            this.createExplosion(this.player.x, this.player.y, '#d00');
+                            if (this.player.hp <= 0) this.gameOver = true;
+                        }
+                    }
+                });
+
+                // 아이템 획득
+                this.items.forEach(i => {
+                    const dist = Math.hypot(i.x - this.player.x, i.y - this.player.y);
+                    if (dist < i.radius + this.player.radius) {
+                        if (i.type === 'hp') {
+                            if (this.player.hp < this.player.maxHp) this.player.hp++;
+                            this.score += 50;
+                        } else if (i.type === 'power') {
+                            this.player.powerUpTimer = 300; // 5초 (60fps 기준)
+                            this.score += 100;
+                        }
+                        i.dead = true;
+                    }
+                });
+
+                // 정리
+                this.bullets = this.bullets.filter(b => b.y > -50 && b.y < this.height + 50 && !b.dead);
+                this.enemies = this.enemies.filter(e => !e.dead);
+                this.items = this.items.filter(i => !i.dead);
+                this.particles = this.particles.filter(p => p.alpha > 0);
+
+                if (this.rushTimer > 0) this.rushTimer--;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                // 배경
+                if (this.isPlayer2) {
+                    ctx.fillStyle = '#fffef0';
+                    ctx.fillRect(0, 0, this.width, this.height);
+                    ctx.beginPath(); ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 1;
+                    for (let x = 0; x < this.width; x += 25) { ctx.moveTo(x, 0); ctx.lineTo(x, this.height); }
+                    for (let y = 0; y < this.height; y += 25) { ctx.moveTo(0, y); ctx.lineTo(this.width, y); }
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = '#fdfdfd';
+                    ctx.fillRect(0, 0, this.width, this.height);
+                    drawWobblyLine(ctx, 40, 0, 40, this.height, '#ffcccc', 2);
+                    ctx.beginPath(); ctx.strokeStyle = '#ccccff';
+                    for (let y = 40; y < this.height; y += 30) { ctx.moveTo(0, y + Math.random()); ctx.lineTo(this.width, y + Math.random()); }
+                    ctx.stroke();
+                }
+                ctx.restore();
+
+                if (this.gameOver) {
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    ctx.fillRect(0, 0, this.width, this.height);
+                    ctx.restore();
+                }
+
+                // 오브젝트
+                this.items.forEach(i => i.draw(ctx));
+                this.enemies.forEach(e => e.draw(ctx));
+                if (this.boss) this.boss.draw(ctx);
+                this.bullets.forEach(b => b.draw(ctx));
+                this.player.draw(ctx);
+                this.particles.forEach(p => p.draw(ctx));
+
+                // UI
+                this.drawUI(ctx);
+
+                // 메시지 (러시/보스)
+                if (this.rushTimer > 0) {
+                    ctx.save();
+                    ctx.translate(this.width / 2, this.height / 2);
+                    ctx.rotate(-0.1);
+                    ctx.fillStyle = 'rgba(255,0,0,0.3)';
+                    ctx.font = '900 50px Courier New';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(this.rushMessage, 0, 0);
+                    ctx.restore();
+                }
+            }
+
+            drawUI(ctx) {
+                // HP
+                const hpX = 20, hpY = 40;
+                ctx.font = "bold 20px Courier New";
+                ctx.fillStyle = "#333";
+                ctx.textAlign = "left";
+                ctx.fillText("HP", hpX, hpY);
+                for (let i = 0; i < this.maxHp; i++) {
+                    const hx = hpX + 35 + i * 20;
+                    ctx.strokeRect(hx, hpY - 10, 12, 12);
+                    if (i < this.player.hp) {
+                        ctx.fillStyle = '#d00';
+                        ctx.fillRect(hx + 2, hpY - 8, 8, 8);
+                    }
+                }
+
+                // PowerUp Bar
+                if (this.player.powerUpTimer > 0) {
+                    ctx.fillStyle = "#fc0";
+                    ctx.fillRect(hpX, hpY + 10, (this.player.powerUpTimer / 3), 4);
+                }
+
+                // Score
+                ctx.textAlign = "right";
+                ctx.fillStyle = "#333";
+                ctx.fillText(this.score, this.width - 20, hpY);
+                ctx.font = "14px Courier New";
+                ctx.fillText(`NEXT BOSS: ${this.nextBossScore}`, this.width - 20, hpY + 20);
+            }
+        }
+
+        // --- 게임 메인 루프 ---
+
+        const Game = {
+            p1: null, p2: null, animationId: null, input: {}, isPlaying: false,
+
+            init() {
+                this.p1 = new GameInstance(false);
+                this.p2 = new GameInstance(true);
+                this.p1.setOpponent(this.p2);
+                this.p2.setOpponent(this.p1);
+                this.input = {};
+
+                window.onkeydown = e => this.input[e.code] = true;
+                window.onkeyup = e => this.input[e.code] = false;
+            },
+
+            start() {
+                if (this.animationId) cancelAnimationFrame(this.animationId);
+                this.init();
+                this.isPlaying = true;
+                document.getElementById('startScreen').classList.add('hidden');
+                document.getElementById('gameOverScreen').classList.add('hidden');
+                this.loop();
+            },
+
+            loop() {
+                if (!this.isPlaying) return;
+                this.animationId = requestAnimationFrame(() => this.loop());
+
+                if (!this.p1.gameOver) this.p1.update(this.input);
+                if (!this.p2.gameOver) this.p2.update(this.input);
+
+                if (this.p1.gameOver || this.p2.gameOver) {
+                    this.endGame();
+                }
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                ctx.save();
+                this.p1.draw(ctx);
+                ctx.restore();
+
+                ctx.save();
+                ctx.translate(500, 0);
+                this.p2.draw(ctx);
+                ctx.restore();
+            },
+
+            endGame() {
+                this.isPlaying = false;
+                cancelAnimationFrame(this.animationId);
+                const ui = document.getElementById('gameOverScreen');
+                const txt = document.getElementById('winnerText');
+                ui.classList.remove('hidden');
+
+                if (this.p1.gameOver && this.p2.gameOver) {
+                    txt.innerText = "DRAW!";
+                    txt.style.color = "#555";
+                } else if (this.p1.gameOver) {
+                    txt.innerText = "PLAYER 2 WINS!";
+                    txt.style.color = "#222";
+                } else {
+                    txt.innerText = "PLAYER 1 WINS!";
+                    txt.style.color = "#00f";
+                }
+            }
+        };
+    </script>
+</body>
+
+</html>
