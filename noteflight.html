@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Doodle Battle Shooter: Power Up!</title>
+    <title>Doodle Battle Shooter: Final</title>
     <style>
         body {
             margin: 0;
@@ -138,8 +138,6 @@
 
     <div id="game-container">
         <canvas id="gameCanvas" width="1000" height="700"></canvas>
-
-        <!-- 중앙 나선 스프링 -->
         <div class="divider"></div>
 
         <div id="ui-layer">
@@ -157,7 +155,7 @@
                 </div>
                 <p>
                     ☠️ 5,000점마다 보스 등장!<br>
-                    ⚡ <strong>파워업 아이템</strong> 추가됨 (확산탄 발사)
+                    ⚡ 파워업 아이템 추가됨
                 </p>
                 <button onclick="Game.start()">BATTLE START</button>
             </div>
@@ -219,9 +217,7 @@
                 this.maxHp = 5;
                 this.hp = 5;
                 this.invincible = 0;
-
-                // 파워업 관련
-                this.powerUpTimer = 0; // 프레임 단위
+                this.powerUpTimer = 0;
             }
 
             update(input) {
@@ -247,7 +243,6 @@
 
                 const jit = () => (Math.random() - 0.5) * 2;
 
-                // 파워업 상태일 때 오라 표시
                 if (this.powerUpTimer > 0) {
                     drawScribbleCircle(ctx, this.x, this.y, 25, 'rgba(255, 200, 0, 0.3)', true);
                 }
@@ -325,7 +320,7 @@
                 this.hp = this.maxHp;
                 this.color = '#000';
                 this.angle = 0;
-                this.state = 'entering'; // entering, fight
+                this.state = 'entering';
                 this.dead = false;
                 this.frame = 0;
             }
@@ -364,7 +359,7 @@
             constructor(x, y, type) {
                 this.x = x;
                 this.y = y;
-                this.type = type; // 'hp' or 'power'
+                this.type = type;
                 this.radius = 12;
                 this.speed = 2;
                 this.dead = false;
@@ -375,19 +370,17 @@
             }
             draw(ctx) {
                 if (this.type === 'hp') {
-                    const c = '#0a0'; // 초록색 (회복)
+                    const c = '#0a0';
                     ctx.strokeStyle = c;
                     ctx.lineWidth = 3;
                     ctx.strokeRect(this.x - 10, this.y - 10, 20, 20);
                     drawWobblyLine(ctx, this.x, this.y - 6, this.x, this.y + 6, c);
                     drawWobblyLine(ctx, this.x - 6, this.y, this.x + 6, this.y, c);
                 } else {
-                    const c = '#fc0'; // 노란색 (파워업)
+                    const c = '#fc0';
                     ctx.strokeStyle = c;
                     ctx.lineWidth = 3;
-                    // 삐죽한 원
                     drawScribbleCircle(ctx, this.x, this.y, 12, c);
-                    // 번개 모양
                     ctx.beginPath();
                     ctx.moveTo(this.x + 2, this.y - 8);
                     ctx.lineTo(this.x - 4, this.y + 2);
@@ -453,11 +446,8 @@
                 this.enemies.push(new Enemy(x, -30, isRush));
             }
 
-            // 아이템 드랍 로직 (확률 조정됨)
             tryDropItem(x, y) {
-                // 5% 확률로 아이템 드랍 (매우 낮음)
                 if (Math.random() < 0.05) {
-                    // HP : Power = 50 : 50
                     const type = Math.random() < 0.5 ? 'hp' : 'power';
                     this.items.push(new Item(x, y, type));
                 }
@@ -482,7 +472,6 @@
                 if (this.gameOver) return;
                 this.frame++;
 
-                // 보스 스폰 체크
                 if (!this.boss && this.score >= this.nextBossScore) {
                     this.boss = new Boss(this.width / 2, -100);
                     this.nextBossScore += 5000;
@@ -492,28 +481,22 @@
                     this.enemies = [];
                 }
 
-                // 플레이어 업데이트
                 this.player.update(input);
 
-                // 총알 발사 (파워업 체크)
                 if (this.frame % 10 === 0) {
                     if (this.player.powerUpTimer > 0) {
-                        // 파워업: 3발 확산탄
                         this.bullets.push(new Bullet(this.player.x, this.player.y - 20, 0, -10));
                         this.bullets.push(new Bullet(this.player.x, this.player.y - 20, -2, -9));
                         this.bullets.push(new Bullet(this.player.x, this.player.y - 20, 2, -9));
                     } else {
-                        // 기본: 1발
                         this.bullets.push(new Bullet(this.player.x, this.player.y - 20));
                     }
                 }
 
-                // 잡졸 스폰
                 if (!this.boss && this.frame % 60 === 0) {
                     this.spawnEnemy();
                 }
 
-                // 보스 업데이트
                 if (this.boss) {
                     this.boss.update(this.width);
 
@@ -529,7 +512,6 @@
                         }
                     }
 
-                    // 플레이어 총알 -> 보스 충돌
                     this.bullets.forEach((b, idx) => {
                         if (!b.dead && !b.isEnemy) {
                             const dist = Math.hypot(b.x - this.boss.x, b.y - this.boss.y);
@@ -542,14 +524,13 @@
                                     this.createExplosion(this.boss.x, this.boss.y, '#000');
                                     this.score += 2000;
                                     this.triggerRush(10, "SUPER RUSH!!");
-                                    this.items.push(new Item(this.boss.x, this.boss.y, 'power')); // 보스 잡으면 확정 파워업
+                                    this.items.push(new Item(this.boss.x, this.boss.y, 'power'));
                                     this.boss = null;
                                 }
                             }
                         }
                     });
 
-                    // 플레이어 -> 보스 몸박
                     if (this.boss && this.player.invincible === 0) {
                         const dist = Math.hypot(this.player.x - this.boss.x, this.player.y - this.boss.y);
                         if (dist < this.boss.radius + this.player.radius) {
@@ -560,15 +541,20 @@
                     }
                 }
 
-                // 객체 업데이트 및 충돌 처리
                 this.bullets.forEach(b => b.update());
                 this.items.forEach(i => i.update(this.height));
                 this.particles.forEach(p => p.update());
 
-                // 잡졸 처리
                 this.enemies.forEach(e => {
                     e.update(this.height);
-                    // 플레이어 피격
+
+                    // --- 적 공격 로직 추가 ---
+                    if (!e.dead && Math.random() < 0.01 && e.y < this.height - 100) {
+                        const angle = Math.atan2(this.player.y - e.y, this.player.x - e.x);
+                        this.bullets.push(new Bullet(e.x, e.y + 10, Math.cos(angle) * 4, Math.sin(angle) * 4, true));
+                    }
+                    // ---------------------
+
                     if (!e.dead && this.player.invincible === 0) {
                         const dist = Math.hypot(e.x - this.player.x, e.y - this.player.y);
                         if (dist < e.radius + this.player.radius) {
@@ -579,7 +565,6 @@
                             if (this.player.hp <= 0) this.gameOver = true;
                         }
                     }
-                    // 적 피격
                     this.bullets.forEach(b => {
                         if (!b.dead && !b.isEnemy && !e.dead) {
                             const dist = Math.hypot(b.x - e.x, b.y - e.y);
@@ -591,7 +576,7 @@
                                     this.score += 100;
                                     this.killCount++;
                                     this.createExplosion(e.x, e.y, '#d00');
-                                    this.tryDropItem(e.x, e.y); // 아이템 드롭 시도
+                                    this.tryDropItem(e.x, e.y);
                                     if (this.killCount % 5 === 0) this.triggerRush(3);
                                 }
                             }
@@ -599,7 +584,6 @@
                     });
                 });
 
-                // 플레이어 -> 적 총알 맞음
                 this.bullets.forEach(b => {
                     if (b.isEnemy && !b.dead && this.player.invincible === 0) {
                         const dist = Math.hypot(b.x - this.player.x, b.y - this.player.y);
@@ -613,7 +597,6 @@
                     }
                 });
 
-                // 아이템 획득
                 this.items.forEach(i => {
                     const dist = Math.hypot(i.x - this.player.x, i.y - this.player.y);
                     if (dist < i.radius + this.player.radius) {
@@ -621,14 +604,13 @@
                             if (this.player.hp < this.player.maxHp) this.player.hp++;
                             this.score += 50;
                         } else if (i.type === 'power') {
-                            this.player.powerUpTimer = 300; // 5초 (60fps 기준)
+                            this.player.powerUpTimer = 300;
                             this.score += 100;
                         }
                         i.dead = true;
                     }
                 });
 
-                // 정리
                 this.bullets = this.bullets.filter(b => b.y > -50 && b.y < this.height + 50 && !b.dead);
                 this.enemies = this.enemies.filter(e => !e.dead);
                 this.items = this.items.filter(i => !i.dead);
@@ -639,7 +621,6 @@
 
             draw(ctx) {
                 ctx.save();
-                // 배경
                 if (this.isPlayer2) {
                     ctx.fillStyle = '#fffef0';
                     ctx.fillRect(0, 0, this.width, this.height);
@@ -664,7 +645,6 @@
                     ctx.restore();
                 }
 
-                // 오브젝트
                 this.items.forEach(i => i.draw(ctx));
                 this.enemies.forEach(e => e.draw(ctx));
                 if (this.boss) this.boss.draw(ctx);
@@ -672,10 +652,8 @@
                 this.player.draw(ctx);
                 this.particles.forEach(p => p.draw(ctx));
 
-                // UI
                 this.drawUI(ctx);
 
-                // 메시지 (러시/보스)
                 if (this.rushTimer > 0) {
                     ctx.save();
                     ctx.translate(this.width / 2, this.height / 2);
@@ -689,28 +667,28 @@
             }
 
             drawUI(ctx) {
-                // HP
                 const hpX = 20, hpY = 40;
                 ctx.font = "bold 20px Courier New";
                 ctx.fillStyle = "#333";
                 ctx.textAlign = "left";
                 ctx.fillText("HP", hpX, hpY);
-                for (let i = 0; i < this.maxHp; i++) {
-                    const hx = hpX + 35 + i * 20;
-                    ctx.strokeRect(hx, hpY - 10, 12, 12);
+
+                for (let i = 0; i < this.player.maxHp; i++) {
+                    const hx = hpX + 45 + i * 25;
+                    const hy = hpY - 5;
+
+                    drawScribbleCircle(ctx, hx, hy, 8, '#555', false);
+
                     if (i < this.player.hp) {
-                        ctx.fillStyle = '#d00';
-                        ctx.fillRect(hx + 2, hpY - 8, 8, 8);
+                        drawScribbleCircle(ctx, hx, hy, 6, '#d00', true);
                     }
                 }
 
-                // PowerUp Bar
                 if (this.player.powerUpTimer > 0) {
                     ctx.fillStyle = "#fc0";
-                    ctx.fillRect(hpX, hpY + 10, (this.player.powerUpTimer / 3), 4);
+                    ctx.fillRect(hpX, hpY + 15, (this.player.powerUpTimer / 3), 4);
                 }
 
-                // Score
                 ctx.textAlign = "right";
                 ctx.fillStyle = "#333";
                 ctx.fillText(this.score, this.width - 20, hpY);
