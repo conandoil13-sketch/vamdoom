@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>나의 레트로 게임 컬렉션</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+KR:wght@400;700&display=swap');
 
@@ -143,7 +143,9 @@
 
     <main class="container mx-auto px-4 pb-20 max-w-6xl">
 
-        <!-- 선반 1층 (액션/어드벤처 테마) -->
+        <!-- ============================================================== -->
+        <!-- [1층 선반] MAIN GAMES -->
+        <!-- ============================================================== -->
         <div class="mb-24">
             <!-- 선반 위 라벨 -->
             <div class="flex items-center mb-4 ml-4">
@@ -158,75 +160,66 @@
                 <div class="flex flex-wrap justify-center gap-8 md:gap-12 px-4 relative z-10 items-end"
                     style="bottom: 10px;">
 
-                    <!-- ============================================================== -->
-                    <!-- [수정 구간 1] 첫 번째 게임 -->
-                    <!-- href="여기" 에 본인의 게임 html 파일 경로를 넣으세요 -->
-                    <!-- ============================================================== -->
+                    <!-- GAME 1: DOOM SURVIVORS (Shooting) -->
                     <div class="game-case-container w-32 h-48 md:w-40 md:h-60">
-                        <!-- 👇 여기 href를 수정하세요 (예: href="mario.html") 👇 -->
                         <a href="aimshooter.html" class="block w-full h-full">
                             <div
-                                class="game-case bg-gradient-to-br from-red-600 to-red-900 flex flex-col items-center justify-center text-center p-2 border border-white/20">
-                                <!-- 커버 이미지나 아이콘 -->
-                                <i class="fa-solid fa-gamepad text-5xl text-white mb-3 drop-shadow-lg"></i>
+                                class="game-case bg-gradient-to-br from-red-800 to-black flex flex-col items-center justify-center text-center p-2 border border-white/20">
+                                <!-- 아이콘 변경: 조준경 -->
+                                <i
+                                    class="fa-solid fa-crosshairs text-5xl text-red-500 mb-3 drop-shadow-[0_0_10px_rgba(255,0,0,0.8)]"></i>
                                 <h3 class="text-white font-bold text-sm md:text-lg leading-tight drop-shadow-md">
                                     DOOM<br>SURVIVORS</h3>
-                                <span class="text-[10px] mt-2 text-red-200 border border-red-400 px-1 rounded">Ver
-                                    1.0</span>
+                                <span
+                                    class="text-[10px] mt-2 text-red-200 border border-red-400 px-1 rounded">FPS</span>
                                 <div class="glossy-overlay"></div>
                             </div>
                         </a>
                     </div>
 
-                    <!-- ============================================================== -->
-                    <!-- [수정 구간 2] 두 번째 게임 -->
-                    <!-- ============================================================== -->
+                    <!-- GAME 2: RYOKAN KEEPER (Management) -->
                     <div class="game-case-container w-32 h-48 md:w-40 md:h-60">
-                        <!-- 👇 여기 href를 수정하세요 👇 -->
                         <a href="ryokanmaster.html" class="block w-full h-full">
                             <div
-                                class="game-case bg-gradient-to-br from-blue-600 to-indigo-900 flex flex-col items-center justify-center text-center p-2 border border-white/20">
-                                <i class="fa-solid fa-rocket text-5xl text-white mb-3 drop-shadow-lg"></i>
+                                class="game-case bg-gradient-to-br from-teal-600 to-cyan-900 flex flex-col items-center justify-center text-center p-2 border border-white/20">
+                                <!-- 아이콘 변경: 토리이(일본 문) -->
+                                <i class="fa-solid fa-torii-gate text-5xl text-white mb-3 drop-shadow-lg"></i>
                                 <h3 class="text-white font-bold text-sm md:text-lg leading-tight drop-shadow-md">
                                     RYOKAN<br>KEEPER</h3>
                                 <span
-                                    class="text-[10px] mt-2 text-blue-200 border border-blue-400 px-1 rounded">Arcade</span>
+                                    class="text-[10px] mt-2 text-cyan-100 border border-cyan-300 px-1 rounded">Sim</span>
                                 <div class="glossy-overlay"></div>
                             </div>
                         </a>
                     </div>
 
-                    <!-- ============================================================== -->
-                    <!-- [수정 구간 3] 세 번째 게임 -->
-                    <!-- ============================================================== -->
+                    <!-- GAME 3: DEFENSE MASTER (Defense) -->
                     <div class="game-case-container w-32 h-48 md:w-40 md:h-60">
-                        <!-- 👇 여기 href를 수정하세요 👇 -->
                         <a href="defensemaster.html" class="block w-full h-full">
                             <div
-                                class="game-case bg-gradient-to-br from-green-600 to-emerald-900 flex flex-col items-center justify-center text-center p-2 border border-white/20">
-                                <i class="fa-solid fa-chess-knight text-5xl text-white mb-3 drop-shadow-lg"></i>
+                                class="game-case bg-gradient-to-br from-green-700 to-emerald-900 flex flex-col items-center justify-center text-center p-2 border border-white/20">
+                                <!-- 아이콘 변경: 방패 -->
+                                <i class="fa-solid fa-shield-halved text-5xl text-yellow-400 mb-3 drop-shadow-lg"></i>
                                 <h3 class="text-white font-bold text-sm md:text-lg leading-tight drop-shadow-md">
                                     DEFENSE<br>MASTER</h3>
                                 <span
-                                    class="text-[10px] mt-2 text-green-200 border border-green-400 px-1 rounded">Brain</span>
+                                    class="text-[10px] mt-2 text-green-200 border border-green-400 px-1 rounded">Strategy</span>
                                 <div class="glossy-overlay"></div>
                             </div>
                         </a>
                     </div>
 
-                    <!-- ============================================================== -->
-                    <!-- [수정 구간 4] 네 번째 게임 -->
-                    <!-- ============================================================== -->
+                    <!-- GAME 4: HARMONY FIGHTER (Fighting/RPG) -->
                     <div class="game-case-container w-32 h-48 md:w-40 md:h-60">
-                        <!-- 👇 여기 href를 수정하세요 👇 -->
                         <a href="harmonyfighter.html" class="block w-full h-full">
                             <div
-                                class="game-case bg-gradient-to-br from-purple-600 to-fuchsia-900 flex flex-col items-center justify-center text-center p-2 border border-white/20">
-                                <i class="fa-solid fa-ghost text-5xl text-white mb-3 drop-shadow-lg"></i>
+                                class="game-case bg-gradient-to-br from-purple-700 to-indigo-900 flex flex-col items-center justify-center text-center p-2 border border-white/20">
+                                <!-- 아이콘 변경: 주먹 -->
+                                <i class="fa-solid fa-hand-fist text-5xl text-orange-400 mb-3 drop-shadow-lg"></i>
                                 <h3 class="text-white font-bold text-sm md:text-lg leading-tight drop-shadow-md">
                                     HARMONY<br>FIGHTER</h3>
                                 <span
-                                    class="text-[10px] mt-2 text-purple-200 border border-purple-400 px-1 rounded">RPG</span>
+                                    class="text-[10px] mt-2 text-purple-200 border border-purple-400 px-1 rounded">Action</span>
                                 <div class="glossy-overlay"></div>
                             </div>
                         </a>
@@ -240,8 +233,10 @@
         </div>
 
 
-        <!-- 선반 2층 (다른 장르) -->
-        <div class="mb-12">
+        <!-- ============================================================== -->
+        <!-- [2층 선반] CLASSICS -->
+        <!-- ============================================================== -->
+        <div class="mb-24">
             <div class="flex items-center mb-4 ml-4">
                 <div class="bg-gray-200 text-black font-bold px-3 py-1 rounded-sm shadow-lg transform rotate-1">
                     CLASSICS
@@ -252,26 +247,94 @@
                 <div class="flex flex-wrap justify-center gap-8 md:gap-12 px-4 relative z-10 items-end"
                     style="bottom: 10px;">
 
-                    <!-- 다섯 번째 게임 (빈 슬롯 예시) -->
+                    <!-- 빈 슬롯 1 -->
                     <div class="game-case-container w-32 h-48 md:w-40 md:h-60">
-                        <!-- 👇 여기 href를 수정하세요 👇 -->
                         <a href="#" class="block w-full h-full">
                             <div
                                 class="game-case bg-gradient-to-br from-gray-700 to-gray-900 flex flex-col items-center justify-center text-center p-2 border border-white/10 opacity-80">
-                                <i class="fa-solid fa-plus text-4xl text-gray-400 mb-3"></i>
+                                <i class="fa-solid fa-ghost text-4xl text-gray-400 mb-3"></i>
+                                <h3 class="text-gray-300 font-bold text-sm">Retro<br>Ghost</h3>
+                                <div class="glossy-overlay"></div>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- 빈 슬롯 2 -->
+                    <div class="game-case-container w-32 h-48 md:w-40 md:h-60">
+                        <a href="#" class="block w-full h-full">
+                            <div
+                                class="game-case bg-gradient-to-br from-gray-700 to-gray-900 flex flex-col items-center justify-center text-center p-2 border border-white/10 opacity-80">
+                                <i class="fa-solid fa-gamepad text-4xl text-gray-400 mb-3"></i>
                                 <h3 class="text-gray-300 font-bold text-sm">Coming<br>Soon</h3>
                                 <div class="glossy-overlay"></div>
                             </div>
                         </a>
                     </div>
 
-                    <!-- 여섯 번째 게임 (빈 슬롯 예시) -->
+                    <!-- 빈 슬롯 3 -->
                     <div class="game-case-container w-32 h-48 md:w-40 md:h-60">
                         <a href="#" class="block w-full h-full">
                             <div
                                 class="game-case bg-gradient-to-br from-gray-700 to-gray-900 flex flex-col items-center justify-center text-center p-2 border border-white/10 opacity-80">
                                 <i class="fa-solid fa-plus text-4xl text-gray-400 mb-3"></i>
-                                <h3 class="text-gray-300 font-bold text-sm">Coming<br>Soon</h3>
+                                <h3 class="text-gray-300 font-bold text-sm">Empty<br>Slot</h3>
+                                <div class="glossy-overlay"></div>
+                            </div>
+                        </a>
+                    </div>
+
+                </div>
+                <!-- 나무 선반 바닥 -->
+                <div class="wood-shelf h-8 w-full rounded-sm"></div>
+            </div>
+        </div>
+
+
+        <!-- ============================================================== -->
+        <!-- [3층 선반] 추가됨! (ARCADE & OTHERS) -->
+        <!-- ============================================================== -->
+        <div class="mb-12">
+            <div class="flex items-center mb-4 ml-4">
+                <div class="bg-blue-500 text-white font-bold px-3 py-1 rounded-sm shadow-lg transform -rotate-1">
+                    ARCADE & OTHERS
+                </div>
+            </div>
+
+            <div class="relative w-full">
+                <div class="flex flex-wrap justify-center gap-8 md:gap-12 px-4 relative z-10 items-end"
+                    style="bottom: 10px;">
+
+                    <!-- 추가된 슬롯 1 -->
+                    <div class="game-case-container w-32 h-48 md:w-40 md:h-60">
+                        <a href="#" class="block w-full h-full">
+                            <div
+                                class="game-case bg-gradient-to-br from-orange-700 to-red-900 flex flex-col items-center justify-center text-center p-2 border border-white/10">
+                                <i class="fa-solid fa-puzzle-piece text-4xl text-yellow-300 mb-3"></i>
+                                <h3 class="text-white font-bold text-sm">PUZZLE<br>MIX</h3>
+                                <div class="glossy-overlay"></div>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- 추가된 슬롯 2 -->
+                    <div class="game-case-container w-32 h-48 md:w-40 md:h-60">
+                        <a href="#" class="block w-full h-full">
+                            <div
+                                class="game-case bg-gradient-to-br from-blue-800 to-black flex flex-col items-center justify-center text-center p-2 border border-white/10">
+                                <i class="fa-solid fa-car text-4xl text-blue-300 mb-3"></i>
+                                <h3 class="text-white font-bold text-sm">RACING<br>STAR</h3>
+                                <div class="glossy-overlay"></div>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- 추가된 슬롯 3 -->
+                    <div class="game-case-container w-32 h-48 md:w-40 md:h-60">
+                        <a href="#" class="block w-full h-full">
+                            <div
+                                class="game-case bg-gradient-to-br from-gray-800 to-black flex flex-col items-center justify-center text-center p-2 border border-white/10 opacity-70">
+                                <i class="fa-solid fa-question text-4xl text-gray-500 mb-3"></i>
+                                <h3 class="text-gray-400 font-bold text-sm">Mystery<br>Game</h3>
                                 <div class="glossy-overlay"></div>
                             </div>
                         </a>
@@ -290,7 +353,7 @@
     </footer>
 
     <script>
-        // 간단한 마우스 움직임에 따른 배경 효과 (선택사항)
+        // 간단한 마우스 움직임에 따른 배경 효과
         document.addEventListener('mousemove', (e) => {
             const mouseX = e.clientX / window.innerWidth;
             const mouseY = e.clientY / window.innerHeight;
